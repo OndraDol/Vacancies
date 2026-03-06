@@ -105,6 +105,7 @@ The application expects an Excel `.xlsx` file exported from the ATS.
 | 2026-03-06 | **HR Consultant logic** — uses `Owner` field (one person); fallback to first name from `Recruiters` |
 | 2026-03-06 | **Visual separation** — stronger row borders, zebra striping, column dividers, larger branch card margins + shadow, animated left-border row accent on hover |
 | 2026-03-06 | **📊 HR Analytics page** — toggled via header button, includes: 10 summary KPIs, VAC by Branch chart, VAC by Division chart, Pipeline doughnut, Age distribution bar chart, Recruiter workload table, Branch comparison table, Top 10 longest open positions |
+| 2026-03-06 | **Firebase Step 6** — Inline edits push to Firebase directly (`db.ref(...).update/remove/set`); added list sorting by order property. |
 
 ## 📝 Firebase Implementation Tasks
 
@@ -113,7 +114,7 @@ The application expects an Excel `.xlsx` file exported from the ATS.
 - [x] **Step 3:** Unique IDs (`crypto.randomUUID()`) for every job and candidate
 - [x] **Step 4:** Firebase write logic — `pushReportToFirebase()` on every upload
 - [x] **Step 5:** Firebase read logic — `onValue()` listener + auto re-render for all clients
-- [ ] **Step 6:** Rewrite inline UI controls to push targeted Firebase updates:
+- [x] **Step 6:** Rewrite inline UI controls to push targeted Firebase updates:
   * ContentEditable (Recruiter, CAP, ACT, VAC) → `db.ref(...).update()`
   * Candidate chip rename / delete → `update()` / `remove()`
   * Add candidate / add phase → `db.ref(...).push()`
