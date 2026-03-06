@@ -7,134 +7,786 @@
     <title>Aures Vacancy Dashboard</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase v10 SDKs (compat mode — global firebase object) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
 
     <style>
+        :root {
+            --brand-50: #f0f9ff;
+            --brand-100: #e0f2fe;
+            --brand-200: #bae6fd;
+            --brand-300: #7dd3fc;
+            --brand-400: #38bdf8;
+            --brand-500: #0ea5e9;
+            --brand-600: #0284c7;
+            --brand-700: #0369a1;
+            --brand-800: #075985;
+            --brand-900: #0c4a6e;
+            --surface: #f8fafc;
+            --surface-warm: #fafbfe;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border-light: rgba(14, 165, 233, 0.08);
+            --border-medium: rgba(14, 165, 233, 0.15);
+            --glass: rgba(255, 255, 255, 0.72);
+            --glass-border: rgba(255, 255, 255, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--surface);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
         }
 
-        .drag-active {
-            border-color: #3b82f6;
-            background-color: #eff6ff;
+        /* ── Animated Background ─────────────────── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 10% -10%, rgba(14, 165, 233, 0.08) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 50% at 90% 100%, rgba(56, 189, 248, 0.06) 0%, transparent 60%),
+                radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.02) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
         }
 
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
+        /* Geometric accent shapes */
+        body::after {
+            content: '';
+            position: fixed;
+            top: -200px;
+            right: -100px;
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.04), rgba(56, 189, 248, 0.02));
+            border-radius: 40% 60% 55% 45% / 55% 40% 60% 45%;
+            pointer-events: none;
+            z-index: 0;
+            animation: morphBlob 20s ease-in-out infinite;
+        }
+
+        @keyframes morphBlob {
+
+            0%,
+            100% {
+                border-radius: 40% 60% 55% 45% / 55% 40% 60% 45%;
+                transform: rotate(0deg) scale(1);
+            }
+
+            25% {
+                border-radius: 55% 45% 40% 60% / 45% 55% 45% 55%;
+                transform: rotate(5deg) scale(1.05);
+            }
+
+            50% {
+                border-radius: 45% 55% 60% 40% / 60% 45% 55% 45%;
+                transform: rotate(-3deg) scale(0.98);
+            }
+
+            75% {
+                border-radius: 60% 40% 45% 55% / 40% 60% 45% 55%;
+                transform: rotate(4deg) scale(1.03);
+            }
+        }
+
+        /* ── Header ─────────────────────────────── */
+        .app-header {
+            background: var(--glass);
+            backdrop-filter: blur(20px) saturate(1.2);
+            -webkit-backdrop-filter: blur(20px) saturate(1.2);
+            border: 1px solid var(--glass-border);
+            border-bottom: 1px solid rgba(14, 165, 233, 0.08);
+            margin: 12px 20px 0 20px;
+            height: 68px;
+            padding: 0 24px;
+            border-radius: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 12px;
+            z-index: 50;
+            box-shadow:
+                0 1px 3px rgba(0, 0, 0, 0.04),
+                0 8px 24px rgba(14, 165, 233, 0.06);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .app-header:hover {
+            box-shadow:
+                0 1px 3px rgba(0, 0, 0, 0.04),
+                0 12px 32px rgba(14, 165, 233, 0.1);
+        }
+
+        .logo-wrap {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-mark {
+            position: relative;
             width: 40px;
             height: 40px;
-            animation: spin 1s linear infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-mark-bg {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-400) 100%);
+            border-radius: 12px;
+            transform: rotate(0deg);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .logo-wrap:hover .logo-mark-bg {
+            transform: rotate(6deg);
+        }
+
+        .logo-mark-inner {
+            position: relative;
+            z-index: 1;
+            font-family: 'Inter', sans-serif;
+            font-weight: 900;
+            font-size: 18px;
+            color: white;
+            letter-spacing: -0.04em;
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+
+        .logo-title span {
+            color: var(--brand-500);
+        }
+
+        .logo-subtitle {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            margin-top: 2px;
+        }
+
+        /* ── Buttons ─────────────────────────────── */
+        .btn-upload {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            color: var(--text-secondary);
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+
+        .btn-upload:hover {
+            background: var(--brand-50);
+            border-color: var(--brand-200);
+            color: var(--brand-700);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+        }
+
+        .btn-export {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+            font-family: inherit;
+        }
+
+        .btn-export:hover {
+            background: linear-gradient(135deg, var(--brand-600), var(--brand-700));
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(14, 165, 233, 0.35);
+        }
+
+        /* ── KPI Cards ───────────────────────────── */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .kpi-card {
+            background: white;
+            border-radius: 14px;
+            padding: 18px 20px;
+            border: 1px solid var(--border-light);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(14, 165, 233, 0.1);
+            border-color: var(--border-medium);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .kpi-card.accent-slate::before {
+            background: linear-gradient(90deg, #94a3b8, #cbd5e1);
+        }
+
+        .kpi-card.accent-blue::before {
+            background: linear-gradient(90deg, var(--brand-500), var(--brand-300));
+        }
+
+        .kpi-card.accent-amber::before {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
+        .kpi-card.accent-green::before {
+            background: linear-gradient(90deg, #10b981, #34d399);
+        }
+
+        .kpi-icon {
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .kpi-card:hover .kpi-icon {
+            transform: scale(1.1);
+        }
+
+        .kpi-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .kpi-value {
+            font-size: 34px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-top: 6px;
+            letter-spacing: -0.03em;
+        }
+
+        /* ── Drop zone ───────────────────────────── */
+        .drop-zone {
+            border: 2px dashed var(--brand-200);
+            border-radius: 24px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone.drag-active {
+            border-color: var(--brand-400);
+            background: var(--brand-50);
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.08);
+        }
+
+        .upload-icon-wrap {
+            width: 88px;
+            height: 88px;
+            background: linear-gradient(135deg, var(--brand-50), var(--brand-100));
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            position: relative;
+            animation: pulse-soft 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-soft {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.15);
+            }
+
+            50% {
+                box-shadow: 0 0 0 16px rgba(14, 165, 233, 0);
+            }
+        }
+
+        .upload-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .upload-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 28px;
+        }
+
+        .upload-desc code {
+            background: var(--brand-50);
+            color: var(--brand-600);
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 12px;
+            border: 1px solid var(--brand-100);
+        }
+
+        .btn-primary-upload {
+            padding: 12px 32px;
+            background: linear-gradient(135deg, var(--brand-500), var(--brand-600));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(14, 165, 233, 0.3);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            letter-spacing: -0.01em;
+        }
+
+        .btn-primary-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(14, 165, 233, 0.35);
+            background: linear-gradient(135deg, var(--brand-600), var(--brand-700));
+        }
+
+        /* ── Section cards ───────────────────────── */
+        .branch-card {
+            background: white;
+            border-radius: 14px;
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+            margin-bottom: 10px;
+            transition: border-color 0.2s ease;
+        }
+
+        .branch-card:hover {
+            border-color: var(--border-medium);
+        }
+
+        .branch-header {
+            background: linear-gradient(90deg, var(--brand-50) 0%, white 100%);
+            border-bottom: 1px solid rgba(14, 165, 233, 0.06);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .branch-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: -0.01em;
+        }
+
+        .branch-count {
+            font-size: 10px;
+            font-weight: 700;
+            background: var(--brand-50);
+            color: var(--brand-600);
+            border: 1px solid var(--brand-100);
+            border-radius: 20px;
+            padding: 3px 12px;
+            letter-spacing: 0.02em;
+        }
+
+        /* ── Region divider ──────────────────────── */
+        .region-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 28px;
+            margin-bottom: 10px;
+        }
+
+        .region-label {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--brand-600);
+            background: var(--brand-50);
+            border: 1px solid var(--brand-100);
+            padding: 4px 14px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .region-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--brand-100), transparent);
+        }
+
+        /* ── Table ───────────────────────────────── */
+        .vacancy-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .vacancy-table thead th {
+            padding: 10px 14px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            background: var(--brand-50);
+            text-align: left;
+            border-bottom: 1px solid var(--brand-100);
+        }
+
+        .vacancy-table thead th.center {
+            text-align: center;
+        }
+
+        .vacancy-table tbody tr {
+            border-bottom: 1px solid rgba(14, 165, 233, 0.04);
+            transition: background 0.15s ease;
+        }
+
+        .vacancy-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .vacancy-table tbody tr:hover {
+            background: rgba(14, 165, 233, 0.02);
+        }
+
+        .vacancy-table td {
+            padding: 12px 14px;
+            vertical-align: top;
+            color: var(--text-primary);
+        }
+
+        .vacancy-table td.center {
+            text-align: center;
+        }
+
+        /* ── Loader ──────────────────────────────── */
+        .loader {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--brand-100);
+            border-top-color: var(--brand-500);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
         }
 
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
+            to {
                 transform: rotate(360deg);
             }
+        }
+
+        /* ── Editable ────────────────────────────── */
+        [contenteditable] {
+            outline: none;
+            border-radius: 4px;
+            transition: box-shadow 0.15s ease;
+        }
+
+        [contenteditable]:hover {
+            box-shadow: 0 0 0 1.5px var(--brand-200);
+        }
+
+        [contenteditable]:focus {
+            box-shadow: 0 0 0 2px var(--brand-400);
+            background: var(--brand-50);
+        }
+
+        .chip-remove {
+            display: none;
+            cursor: pointer;
+            margin-left: 2px;
+            font-size: 10px;
+            line-height: 1;
+            opacity: 0.5;
+        }
+
+        .chip-remove:hover {
+            opacity: 1;
+        }
+
+        .candidate-chip:hover .chip-remove {
+            display: inline;
+        }
+
+        .add-name-btn {
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .phase-row:hover .add-name-btn,
+        tr:hover .add-phase-btn {
+            opacity: 1;
+        }
+
+        .add-phase-btn {
+            opacity: 0;
+            transition: opacity 0.15s;
+            cursor: pointer;
+        }
+
+        .phase-dropdown {
+            position: fixed;
+            background: white;
+            border: 1px solid var(--brand-100);
+            border-radius: 12px;
+            box-shadow: 0 12px 32px rgba(14, 165, 233, 0.12), 0 4px 8px rgba(0, 0, 0, 0.04);
+            padding: 4px;
+            z-index: 50;
+        }
+
+        .phase-dropdown button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 6px 14px;
+            font-size: 12px;
+            border-radius: 8px;
+            font-family: inherit;
+            cursor: pointer;
+            border: none;
+            background: none;
+            transition: background 0.12s;
+        }
+
+        .phase-dropdown button:hover {
+            background: var(--brand-50);
+        }
+
+        .row-controls {
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        tr:hover .row-controls {
+            opacity: 1;
+        }
+
+        /* ── Page transition ─────────────────────── */
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── Scrollbar ───────────────────────────── */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--brand-200);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--brand-300);
+        }
+
+        /* Division tag style */
+        .division-tag {
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--brand-50);
+            color: var(--brand-600);
+            padding: 1px 8px;
+            border-radius: 5px;
+            border: 1px solid var(--brand-100);
         }
     </style>
 </head>
 
-<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+<body class="flex flex-col h-screen">
 
-    <header class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm z-10">
-        <div class="flex items-center gap-3">
-            <div class="bg-blue-600 p-2 rounded-lg text-white">
-                <i data-lucide="bar-chart-2" class="w-6 h-6"></i>
+    <header class="app-header">
+        <div class="logo-wrap">
+            <div class="logo-mark">
+                <div class="logo-mark-bg"></div>
+                <span class="logo-mark-inner">A</span>
             </div>
-            <div>
-                <h1 class="text-xl font-bold tracking-tight text-slate-900">Aures Vacancy Report</h1>
-                <p class="text-xs text-slate-500 font-medium">HR Analytics Dashboard</p>
+            <div class="logo-text">
+                <div class="logo-title">Aures <span>Vacancy</span></div>
+                <div class="logo-subtitle">Workforce Intelligence</div>
             </div>
         </div>
-        <div class="flex gap-4">
-            <button onclick="document.getElementById('fileInput').click()"
-                class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition text-sm font-medium">
-                <i data-lucide="upload-cloud" class="w-4 h-4"></i> Nahrát nový soubor
+        <div class="flex gap-3">
+            <button onclick="document.getElementById('fileInput').click()" class="btn-upload">
+                <i data-lucide="upload" class="w-4 h-4" style="color:var(--brand-500)"></i> Nahrát report
             </button>
-            <button onclick="exportTableToExcel()" id="exportBtn"
-                class="hidden flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition text-sm font-medium shadow-md">
-                <i data-lucide="download" class="w-4 h-4"></i> Export do Excelu
+            <button onclick="exportTableToExcel()" id="exportBtn" class="btn-export hidden">
+                <i data-lucide="download" class="w-4 h-4"></i> Exportovat
             </button>
         </div>
     </header>
 
-    <main class="flex-1 overflow-auto p-8 relative">
+    <main class="flex-1 overflow-auto p-6 relative" style="z-index:1;">
 
         <div id="dropZone"
-            class="absolute inset-0 m-8 border-2 border-dashed border-slate-300 rounded-xl bg-white flex flex-col justify-center items-center transition-all z-20">
+            class="drop-zone absolute inset-0 m-6 flex flex-col justify-center items-center transition-all z-20">
             <input type="file" id="fileInput" class="hidden" accept=".xlsx, .csv">
-            <div class="bg-blue-50 p-4 rounded-full mb-4">
-                <i data-lucide="file-spreadsheet" class="w-12 h-12 text-blue-600"></i>
+            <div class="upload-icon-wrap">
+                <i data-lucide="file-spreadsheet" class="w-10 h-10" style="color:var(--brand-500)"></i>
             </div>
-            <h2 class="text-2xl font-bold text-slate-700 mb-2">Nahrajte report z ATS</h2>
-            <p class="text-slate-500 mb-6">Přetáhněte sem soubor <code
-                    class="bg-slate-100 px-2 py-1 rounded text-slate-700">.xlsx</code> nebo klikněte pro výběr</p>
-            <button onclick="document.getElementById('fileInput').click()"
-                class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg transition transform hover:-translate-y-0.5">
+            <h2 class="upload-title">Nahrajte report z ATS</h2>
+            <p class="upload-desc">Přetáhněte sem soubor <code>.xlsx</code> nebo klikněte pro výběr</p>
+            <button onclick="document.getElementById('fileInput').click()" class="btn-primary-upload">
                 Vybrat soubor
             </button>
         </div>
 
-        <div id="dashboard" class="hidden max-w-7xl mx-auto space-y-6">
+        <div id="dashboard" class="hidden max-w-7xl mx-auto fade-in" style="padding-bottom:40px;">
 
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">Celkem Pozic</p>
-                            <h3 class="text-3xl font-bold text-slate-800 mt-1" id="kpi-total">0</h3>
-                        </div>
-                        <div class="p-2 bg-slate-50 rounded-lg text-slate-400"><i data-lucide="briefcase"></i></div>
-                    </div>
+            <div class="kpi-grid">
+                <div class="kpi-card accent-slate">
+                    <div class="kpi-icon" style="background:rgba(148,163,184,0.1);"><i data-lucide="briefcase"
+                            style="color:#94a3b8;width:16px;height:16px;"></i></div>
+                    <div class="kpi-label">Celkem Pozic</div>
+                    <div class="kpi-value" id="kpi-total" style="color:var(--text-primary);">0</div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">Volná Místa (VAC)</p>
-                            <h3 class="text-3xl font-bold text-blue-600 mt-1" id="kpi-vac">0</h3>
-                        </div>
-                        <div class="p-2 bg-blue-50 rounded-lg text-blue-500"><i data-lucide="users"></i></div>
-                    </div>
+                <div class="kpi-card accent-blue">
+                    <div class="kpi-icon" style="background:rgba(14,165,233,0.08);"><i data-lucide="users"
+                            style="color:var(--brand-500);width:16px;height:16px;"></i></div>
+                    <div class="kpi-label">Volná Místa</div>
+                    <div class="kpi-value" id="kpi-vac" style="color:var(--brand-500);">0</div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">Aktivní Nábory</p>
-                            <h3 class="text-3xl font-bold text-amber-500 mt-1" id="kpi-active">0</h3>
-                        </div>
-                        <div class="p-2 bg-amber-50 rounded-lg text-amber-500"><i data-lucide="activity"></i></div>
-                    </div>
+                <div class="kpi-card accent-amber">
+                    <div class="kpi-icon" style="background:rgba(245,158,11,0.08);"><i data-lucide="activity"
+                            style="color:#f59e0b;width:16px;height:16px;"></i></div>
+                    <div class="kpi-label">Aktivní Nábory</div>
+                    <div class="kpi-value" id="kpi-active" style="color:#d97706;">0</div>
                 </div>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-sm font-medium text-slate-500">Úspěšné Nástupy</p>
-                            <h3 class="text-3xl font-bold text-green-600 mt-1" id="kpi-hired">0</h3>
-                        </div>
-                        <div class="p-2 bg-green-50 rounded-lg text-green-500"><i data-lucide="check-circle-2"></i>
-                        </div>
-                    </div>
+                <div class="kpi-card accent-green">
+                    <div class="kpi-icon" style="background:rgba(16,185,129,0.08);"><i data-lucide="check-circle-2"
+                            style="color:#10b981;width:16px;height:16px;"></i></div>
+                    <div class="kpi-label">Úspěšné Nástupy</div>
+                    <div class="kpi-value" id="kpi-hired" style="color:#10b981;">0</div>
                 </div>
             </div>
 
-            <div id="contentArea" class="space-y-8">
-            </div>
+            <div id="contentArea"></div>
         </div>
     </main>
 
     <script>
+        // ── Firebase Configuration ─────────────────────────────────
+        // TODO: Replace placeholder values with your real Firebase project config
+        // (Firebase Console → Project settings → Your apps → Config snippet)
+        const FIREBASE_CONFIG = {
+            apiKey: 'YOUR_API_KEY',
+            authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
+            databaseURL: 'https://YOUR_PROJECT_ID-default-rtdb.europe-west1.firebasedatabase.app',
+            projectId: 'YOUR_PROJECT_ID',
+            storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+            messagingSenderId: 'YOUR_SENDER_ID',
+            appId: 'YOUR_APP_ID',
+        };
+
+        // Initialize Firebase app (guard against double-init during hot-reload)
+        const firebaseApp = firebase.apps.length
+            ? firebase.app()
+            : firebase.initializeApp(FIREBASE_CONFIG);
+        const db = firebaseApp.database();
+
+        // Flag: Firebase is only active once real config values are filled in
+        const FIREBASE_ENABLED = FIREBASE_CONFIG.apiKey !== 'YOUR_API_KEY';
+        if (!FIREBASE_ENABLED) {
+            console.info('[Firebase] Running in offline mode — fill in FIREBASE_CONFIG to enable real-time sync.');
+        }
+        // ──────────────────────────────────────────────────────────
+
         lucide.createIcons();
 
         const dropZone = document.getElementById('dropZone');
@@ -146,18 +798,67 @@
         const DB_NAME = 'AuresDashboardDB';
         const STORE_NAME = 'files';
 
+        const OVERRIDES_STORE = 'jobOverrides';
+
         function initDB() {
             return new Promise((resolve, reject) => {
-                const req = indexedDB.open(DB_NAME, 1);
+                const req = indexedDB.open(DB_NAME, 2); // version bumped to 2 to trigger upgrade
                 req.onupgradeneeded = (e) => {
                     const db = e.target.result;
                     if (!db.objectStoreNames.contains(STORE_NAME)) {
                         db.createObjectStore(STORE_NAME);
                     }
+                    if (!db.objectStoreNames.contains(OVERRIDES_STORE)) {
+                        db.createObjectStore(OVERRIDES_STORE);
+                    }
                 };
                 req.onsuccess = (e) => resolve(e.target.result);
                 req.onerror = (e) => reject(e.target.error);
             });
+        }
+
+        // Save CAP/ACT/VAC override for a specific job ref number
+        async function saveJobOverride(refNumber, field, value) {
+            try {
+                const db = await initDB();
+                const tx = db.transaction(OVERRIDES_STORE, 'readwrite');
+                const store = tx.objectStore(OVERRIDES_STORE);
+                const getReq = store.get(refNumber);
+                getReq.onsuccess = (e) => {
+                    const existing = e.target.result || {};
+                    existing[field] = value;
+                    store.put(existing, refNumber);
+                };
+            } catch (e) {
+                console.warn('Failed to save job override', e);
+            }
+        }
+
+        // Load all overrides as a map: { refNumber -> { cap, act, vac } }
+        async function loadAllJobOverrides() {
+            try {
+                const db = await initDB();
+                if (!db.objectStoreNames.contains(OVERRIDES_STORE)) return {};
+                return new Promise((resolve) => {
+                    const tx = db.transaction(OVERRIDES_STORE, 'readonly');
+                    const store = tx.objectStore(OVERRIDES_STORE);
+                    const result = {};
+                    const cursorReq = store.openCursor();
+                    cursorReq.onsuccess = (e) => {
+                        const cursor = e.target.result;
+                        if (cursor) {
+                            result[cursor.key] = cursor.value;
+                            cursor.continue();
+                        } else {
+                            resolve(result);
+                        }
+                    };
+                    cursorReq.onerror = () => resolve({});
+                });
+            } catch (e) {
+                console.warn('Failed to load job overrides', e);
+                return {};
+            }
         }
 
         async function saveFileToDB(buffer) {
@@ -221,7 +922,6 @@
 
         // Main Logic
         async function processFile(file) {
-            // Show simple loading state logic if needed
             dropZone.style.display = 'none';
             dashboard.classList.remove('hidden');
             contentArea.innerHTML = '<div class="flex justify-center py-20"><div class="loader"></div></div>';
@@ -229,43 +929,108 @@
             const data = await file.arrayBuffer();
             await saveFileToDB(data);
 
-            // Short delay to allow UI to render spinner
             setTimeout(() => processArrayBuffer(data), 50);
         }
 
-        function processArrayBuffer(data) {
+        async function processArrayBuffer(data) {
             dropZone.style.display = 'none';
             dashboard.classList.remove('hidden');
             contentArea.innerHTML = '<div class="flex justify-center py-20"><div class="loader"></div></div>';
 
-            // We use setTimeout to enable the UI to update with "loader" before the main thread blocks
-            setTimeout(() => {
+            // Load persisted overrides before rendering
+            const jobOverrides = await loadAllJobOverrides();
+
+            setTimeout(async () => {
                 try {
                     const workbook = XLSX.read(data);
 
-                    // 1. Get Jobs Data
                     let jobsSheetName = workbook.SheetNames.find(n => n.includes("Jobs"));
-                    if (!jobsSheetName) jobsSheetName = workbook.SheetNames[0]; // Fallback
+                    if (!jobsSheetName) jobsSheetName = workbook.SheetNames[0];
                     const jobsData = XLSX.utils.sheet_to_json(workbook.Sheets[jobsSheetName]);
 
-                    // 2. Get Hiring Process Data
                     let hiringSheetName = workbook.SheetNames.find(n => n.includes("Hiring processes"));
                     let candidatesData = [];
                     if (hiringSheetName) {
                         candidatesData = XLSX.utils.sheet_to_json(workbook.Sheets[hiringSheetName]);
                     }
 
-                    // 3. Process Data
                     const report = generateReport(jobsData, candidatesData);
-
-                    // 4. Render
-                    renderDashboard(report);
+                    renderDashboard(report, jobOverrides);
                     document.getElementById('exportBtn').classList.remove('hidden');
+
+                    // Step 4: Push to Firebase if configured
+                    if (FIREBASE_ENABLED) {
+                        await pushReportToFirebase(report);
+                    }
                 } catch (error) {
                     console.error("Error processing Excel file:", error);
-                    contentArea.innerHTML = '<div class="text-red-500 text-center py-10">Nastala chyba při čtení souboru. Zkontrolujte formát.</div>';
+                    contentArea.innerHTML = '<div class="text-red-500 text-center py-10">Nastala chyba p&#345;i &#269;ten&#237; souboru. Zkontrolujte form&#225;t.</div>';
                 }
             }, 50);
+        }
+
+        /**
+         * Step 4 — Write the parsed report to Firebase Realtime Database.
+         * Structure:
+         *   /reports/{uploadId}/meta          — timestamp, uploadedAt
+         *   /reports/{uploadId}/branches/{branch}/jobs/{jobId}  — job object
+         *   /reports/{uploadId}/branches/{branch}/jobs/{jobId}/candidates/{candidateId}
+         *
+         * Also writes a pointer at /latestReport so Step 5 listener knows what to read.
+         */
+        async function pushReportToFirebase(groupedData) {
+            try {
+                const uploadId = crypto.randomUUID();
+                const uploadedAt = new Date().toISOString();
+
+                const payload = {
+                    meta: { uploadedAt, uploadId },
+                    branches: {}
+                };
+
+                for (const [branch, jobs] of Object.entries(groupedData)) {
+                    // Sanitize branch name for use as Firebase key (no dots, slashes, etc.)
+                    const branchKey = branch.replace(/[.#$\[\]/]/g, '_');
+                    payload.branches[branchKey] = {
+                        name: branch,
+                        jobs: {}
+                    };
+                    for (const job of jobs) {
+                        const candidatesObj = {};
+                        for (const c of job.candidates) {
+                            candidatesObj[c.id] = {
+                                name: c.name,
+                                category: c.category,
+                                date: c.date || '',
+                                fullStatus: c.fullStatus || ''
+                            };
+                        }
+                        payload.branches[branchKey].jobs[job.jobId] = {
+                            ref: job.ref,
+                            position: job.position,
+                            division: job.division || '',
+                            department: job.department || '',
+                            date: job.date || '',
+                            daysOpen: job.daysOpen,
+                            cap: job.cap,
+                            vac: job.vac,
+                            actual: job.actual,
+                            recruiter: job.recruiter || '',
+                            manager: job.manager || '',
+                            candidates: candidatesObj
+                        };
+                    }
+                }
+
+                // Write everything atomically
+                await db.ref(`reports/${uploadId}`).set(payload);
+                // Update pointer to latest report
+                await db.ref('latestReport').set({ uploadId, uploadedAt });
+
+                console.info(`[Firebase] Report pushed: reports/${uploadId}`);
+            } catch (err) {
+                console.error('[Firebase] Failed to push report:', err);
+            }
         }
 
         function parseExcelDate(excelDate) {
@@ -286,7 +1051,6 @@
         }
 
         function generateReport(jobs, candidates) {
-            // Group candidates by Ref. number
             const candidatesByJob = {};
             let hiredCount = 0;
 
@@ -294,7 +1058,6 @@
                 const ref = c['Ref. number'];
                 if (!candidatesByJob[ref]) candidatesByJob[ref] = [];
 
-                // Normalize status
                 const status = (c['Last status'] || "").toLowerCase().trim();
                 const result = (c['Result'] || "").toLowerCase().trim();
                 const name = c['Candidate'] || "Unknown";
@@ -302,16 +1065,16 @@
                 let category = 'OTHER';
                 let dateStr = "";
 
-                // Only statuses that clearly indicate a real interview took place and candidate was rejected
                 const POST_INTERVIEW_REJECTIONS = [
                     'not qualified after internal interview',
                     'favored a more appropriate candidate'
                 ];
 
                 if (result === 'accepted' || status === 'start date confirmed' || status === 'waiting for start date confirmation') {
-                    category = 'HIRED';
+                    const startDate = parseExcelDate(c['Start date']);
                     dateStr = formatDate(c['Start date']);
                     hiredCount++;
+                    category = (startDate && startDate < new Date()) ? 'HIRED_PAST' : 'HIRED';
                 } else if (status === 'interview' || status === 'internal interview') {
                     const interviewDate = parseExcelDate(c['Last interview'] || c['Last activity']);
                     const isFuture = interviewDate && interviewDate > new Date();
@@ -324,21 +1087,21 @@
                 } else if (POST_INTERVIEW_REJECTIONS.includes(status)) {
                     category = 'NO_AFTER';
                 }
-                // All other negatives (prescreen rejects, not interested, not responding etc.) → 'OTHER' = hidden
 
                 if (category !== 'OTHER') {
-                    candidatesByJob[ref].push({ name, category, date: dateStr, fullStatus: status });
+                    candidatesByJob[ref].push({
+                        id: crypto.randomUUID(),   // stable ID for Firebase path
+                        name, category, date: dateStr, fullStatus: status
+                    });
                 }
             });
 
-            // Filter Active Jobs
             const activeJobs = jobs.filter(j => {
                 const status = (j['Job status'] || "").toLowerCase();
                 const leftToFill = parseInt(j['Headcount - left to fill'] || 0);
                 return status === 'active' || leftToFill > 0;
             });
 
-            // Group by Branch (Place)
             const grouped = {};
             let totalVac = 0;
 
@@ -349,12 +1112,10 @@
                 const ref = job['Ref. number'];
                 const jobCandidates = candidatesByJob[ref] || [];
 
-                // Calculations
                 const cap = parseInt(job['Headcount'] || 0);
                 const vac = parseInt(job['Headcount - left to fill'] || 0);
                 totalVac += vac;
 
-                // Time to fill
                 const created = parseExcelDate(job['Date created']);
                 let diffDays = 0;
                 if (created) {
@@ -363,7 +1124,10 @@
                     diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
                 }
 
+                const jobId = crypto.randomUUID();   // stable ID for Firebase path
+
                 grouped[place].push({
+                    jobId,
                     ref: ref,
                     position: job['Job vacancy'],
                     division: job['Division'],
@@ -379,69 +1143,149 @@
                 });
             });
 
-            // Update KPIs
             document.getElementById('kpi-total').innerText = activeJobs.length;
             document.getElementById('kpi-vac').innerText = totalVac;
             document.getElementById('kpi-active').innerText = candidates.filter(c => (c['Last status'] || "").includes('interview')).length;
-            document.getElementById('kpi-hired').innerText = hiredCount; // Rough estimate based on filtered data
+            document.getElementById('kpi-hired').innerText = hiredCount;
 
             return grouped;
         }
 
-        function renderDashboard(groupedData) {
+        function renderDashboard(groupedData, jobOverrides = {}) {
             contentArea.innerHTML = '';
 
-            // Sort Places alphabetically
-            const places = Object.keys(groupedData).sort();
+            const BRANCH_ORDER = [
+                { branch: 'Praha', regionLabel: 'Prague HQ &amp; Mototechna' },
+                { branch: 'Praha - Zlíčn', regionLabel: null },
+                { branch: 'Prague Branch', regionLabel: 'Reg. Praha' },
+                { branch: 'Čestlice', regionLabel: null },
+                { branch: 'Klecany', regionLabel: null },
+                { branch: 'České Budějovice', regionLabel: 'Bohemia 1' },
+                { branch: 'Chomutov', regionLabel: null },
+                { branch: 'Kladno', regionLabel: null },
+                { branch: 'Plzeň', regionLabel: null },
+                { branch: 'Sokolov', regionLabel: null },
+                { branch: 'Tábor', regionLabel: null },
+                { branch: 'Hradec Králové', regionLabel: 'Bohemia 2' },
+                { branch: 'Kolín', regionLabel: null },
+                { branch: 'Liberec', regionLabel: null },
+                { branch: 'Mladá Boleslav', regionLabel: null },
+                { branch: 'Teplice', regionLabel: null },
+                { branch: 'Ústí nad Labem', regionLabel: null },
+                { branch: 'Brno', regionLabel: 'Moravia 1' },
+                { branch: 'Jihlava', regionLabel: null },
+                { branch: 'Olomouc', regionLabel: null },
+                { branch: 'Znojmo', regionLabel: null },
+                { branch: 'Opava', regionLabel: 'Moravia 2' },
+                { branch: 'Ostrava', regionLabel: null },
+                { branch: 'Pardubice', regionLabel: null },
+                { branch: 'Otrokovice', regionLabel: null },
+                { branch: 'Příbram', regionLabel: null },
+            ];
 
-            places.forEach(place => {
+            const definedBranches = BRANCH_ORDER.map(b => b.branch);
+            const allBranches = Object.keys(groupedData);
+            const orderedBranches = [
+                ...BRANCH_ORDER.filter(b => allBranches.includes(b.branch)),
+                ...allBranches.filter(b => !definedBranches.includes(b)).sort().map(b => ({ branch: b, regionLabel: null }))
+            ];
+
+            const DIVISION_ORDER = [
+                'Call Centre',
+                'Marketing & Communication',
+                'Innovations',
+                'Commerce',
+                'Economic',
+                'IT',
+                'Data Science',
+                'Cost Control & Back Office',
+                'Office Operations',
+                'HR',
+                'Stock & Logistics',
+                'Service',
+                'Financial Services',
+                'Car Sales',
+                'Car Purchase',
+                'Automotive Operations',
+                'Mototechna',
+            ];
+
+            const HQ_BRANCHES = ['Praha', 'Praha - Zlíčn'];
+
+            const BRANCH_DIVISION_ORDER = [
+                'Car Sales',
+                'Financial Services',
+                'Automotive Operations',
+            ];
+
+            const divisionRank = (div, isHQ) => {
+                const list = isHQ ? DIVISION_ORDER : BRANCH_DIVISION_ORDER;
+                const idx = list.indexOf(div || '');
+                return idx === -1 ? 999 : idx;
+            };
+
+            orderedBranches.forEach(({ branch: place, regionLabel }) => {
                 const jobs = groupedData[place];
-                // Sort jobs by Division
-                jobs.sort((a, b) => (a.division || "").localeCompare(b.division || ""));
+                if (!jobs) return;
+                const isHQ = HQ_BRANCHES.includes(place);
+                jobs.sort((a, b) => divisionRank(a.division, isHQ) - divisionRank(b.division, isHQ));
 
-                // Create Section
+                if (regionLabel) {
+                    const divider = document.createElement('div');
+                    divider.className = 'region-divider';
+                    divider.innerHTML = `
+                        <span class="region-label">${regionLabel}</span>
+                        <div class="region-line"></div>
+                    `;
+                    contentArea.appendChild(divider);
+                }
+
                 const section = document.createElement('div');
-                section.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8";
+                section.className = 'branch-card';
 
-                // Section Header
                 section.innerHTML = `
-                    <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <i data-lucide="map-pin" class="w-5 h-5 text-blue-500"></i> ${place}
-                        </h2>
-                        <span class="bg-white border border-slate-200 px-3 py-1 rounded-full text-xs font-semibold text-slate-600">
-                            ${jobs.length} Pozic
-                        </span>
+                    <div class="branch-header">
+                        <div class="branch-name">
+                            <i data-lucide="map-pin" style="width:14px;height:14px;color:var(--brand-500);"></i>
+                            ${place}
+                        </div>
+                        <span class="branch-count">${jobs.length} pozic</span>
                     </div>
                 `;
 
-                // Table
                 const tableWrapper = document.createElement('div');
-                tableWrapper.className = "overflow-x-auto";
+                tableWrapper.style.overflowX = 'auto';
 
                 const table = document.createElement('table');
-                table.className = "w-full text-left text-sm text-slate-600";
+                table.className = 'vacancy-table';
 
                 table.innerHTML = `
-                    <thead class="bg-slate-50 text-xs uppercase font-semibold text-slate-500">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3">Pozice / Divize</th>
-                            <th class="px-6 py-3">Stáří</th>
-                            <th class="px-6 py-3">HR consultant</th>
-                            <th class="px-6 py-3 w-1/3">Status Kandidátů</th>
-                            <th class="px-6 py-3 text-center">CAP</th>
-                            <th class="px-6 py-3 text-center">VAC</th>
+                            <th style="width:32px"></th>
+                            <th>Pozice / Divize</th>
+                            <th>Stáří</th>
+                            <th>HR consultant</th>
+                            <th style="width:33%">Status Kandidátů</th>
+                            <th class="center">CAP</th>
+                            <th class="center">ACT</th>
+                            <th class="center">VAC</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody>
                         ${jobs.map(job => {
-                    // Build structured candidate rows grouped by category
                     const PHASES = [
                         {
                             key: 'HIRED',
                             label: 'Hired',
                             labelStyle: 'text-red-600 font-semibold',
                             chipStyle: 'bg-red-50 text-red-700 border border-red-200'
+                        },
+                        {
+                            key: 'HIRED_PAST',
+                            label: 'Hired in past',
+                            labelStyle: 'text-red-400 font-semibold',
+                            chipStyle: 'bg-red-50 text-red-400 border border-red-100'
                         },
                         {
                             key: 'FOR_INTERVIEW',
@@ -488,8 +1332,8 @@
                         const hiddenGroup = collapse ? group.slice(COLLAPSE_LIMIT) : [];
 
                         const makeChip = c =>
-                            `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded ${phase.chipStyle} text-xs font-medium">
-                                ${c.name}${c.date ? ` <span class="opacity-60 text-[10px]">(${c.date})</span>` : ''}
+                            `<span class="candidate-chip inline-flex items-center gap-1 px-2 py-0.5 rounded ${phase.chipStyle} text-xs font-medium">
+                                <span contenteditable="true" class="outline-none">${c.name}${c.date ? ` <span class="opacity-60 text-[10px]">(${c.date})</span>` : ''}</span><span class="chip-remove" onclick="this.closest('.candidate-chip').remove()" title="Odebrat">&times;</span>
                             </span>`;
 
                         const visibleChips = visibleGroup.map(makeChip).join(' ');
@@ -498,47 +1342,57 @@
 
                         const expandBtn = collapse
                             ? `<button onclick="toggleExpand('${uid}')" id="btn-${uid}" class="text-xs text-slate-400 hover:text-slate-600 transition underline-offset-2 hover:underline whitespace-nowrap">+${hiddenGroup.length} více</button>
-                               <span id="collapse-${uid}" class="hidden flex flex-wrap gap-1">${hiddenChips}
+                               <span id="collapse-${uid}" class="hidden flex flex-wrap gap-1"><span>${hiddenChips}</span>
                                  <button onclick="toggleExpand('${uid}')" class="text-xs text-slate-400 hover:text-slate-600 transition underline-offset-2 hover:underline whitespace-nowrap">méně ↑</button>
                                </span>`
                             : '';
 
-                        return `<div class="flex items-start gap-2 py-0.5">
+                        return `<div class="phase-row flex items-start gap-2 py-0.5">
                                     <span class="text-xs w-32 shrink-0 mt-0.5 ${phase.labelStyle}">${phase.label}</span>
-                                    <div class="flex flex-wrap gap-1 items-center">${visibleChips} ${expandBtn}</div>
+                                    <div class="flex flex-wrap gap-1 items-center">${visibleChips} ${expandBtn}
+                                        <span class="add-name-btn text-xs text-slate-400 hover:text-sky-500 px-1 rounded hover:bg-sky-50" onclick="addNameToRow(this, '${phase.chipStyle}')" title="Přidat jméno">+</span>
+                                    </div>
                                 </div>`;
                     }).join('');
 
                     return `
-                                <tr class="hover:bg-slate-50 transition-colors group">
-                                    <td class="px-6 py-4">
-                                        <div class="font-bold text-slate-800 text-base">${job.position}</div>
-                                        <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                                            <span class="font-medium bg-slate-100 px-1.5 rounded">${job.division}</span>
-                                            <span class="text-slate-400">&bull;</span>
-                                            <span>${job.department}</span>
+                                <tr>
+                                    <td style="width:32px;padding:10px 6px;">
+                                        <div class="row-controls" style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                                            <button onclick="moveRowUp(this)" title="Posunout nahoru" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;line-height:1;padding:1px;" onmouseover="this.style.color='var(--brand-500)'" onmouseout="this.style.color='#94a3b8'">&#8593;</button>
+                                            <button onclick="moveRowDown(this)" title="Posunout dolů" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;line-height:1;padding:1px;" onmouseover="this.style.color='var(--brand-500)'" onmouseout="this.style.color='#94a3b8'">&#8595;</button>
+                                            <button onclick="deleteRow(this)" title="Smazat pozici" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;line-height:1;padding:1px;margin-top:3px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">&times;</button>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4">
-                                        <div class="font-medium ${job.daysOpen > 60 ? 'text-red-500' : 'text-slate-700'}">${job.daysOpen} dní</div>
-                                        <div class="text-xs text-slate-400">${job.date}</div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-1.5 text-xs text-slate-500" title="HR consultant">
-                                            <i data-lucide="user-check" class="w-3 h-3 text-slate-400"></i> ${job.recruiter || '-'}
+                                    <td>
+                                        <div style="font-weight:700;color:var(--text-primary);font-size:14px;letter-spacing:-0.01em;">${job.position}</div>
+                                        <div style="margin-top:4px;display:flex;align-items:center;gap:5px;">
+                                            <span class="division-tag">${job.division}</span>
+                                            ${job.department ? `<span style="font-size:11px;color:#cbd5e1;">&bull;</span><span style="font-size:11px;color:var(--text-muted);">${job.department}</span>` : ''}
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex flex-col gap-0.5">
-                                            ${phaseRows || '<span class="text-xs text-slate-400 italic">Žádná aktivita</span>'}
+                                    <td>
+                                        <div style="font-weight:600;font-size:13px;${job.daysOpen > 60 ? 'color:#ef4444;' : 'color:var(--text-secondary);'}">${job.daysOpen} dní</div>
+                                        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${job.date}</div>
+                                    </td>
+                                    <td>
+                                        <div contenteditable="true" style="font-size:12px;color:var(--text-secondary);" title="HR consultant">${job.recruiter || '-'}</div>
+                                    </td>
+                                    <td>
+                                        <div style="display:flex;flex-direction:column;gap:2px;">
+                                            ${phaseRows || '<span style="font-size:11px;color:var(--text-muted);font-style:italic;">Žádná aktivita</span>'}
+                                            <div style="position:relative;display:inline-block;">
+                                                <span class="add-phase-btn" style="font-size:11px;color:var(--text-muted);padding:1px 4px;border-radius:4px;cursor:pointer;" onmouseover="this.style.color='var(--brand-500)';this.style.background='var(--brand-50)'" onmouseout="this.style.color='var(--text-muted)';this.style.background=''" onclick="showPhaseDropdown(event, this)" title="Přidat status">+ přidat status</span>
+                                            </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 text-center font-medium text-slate-500">${job.cap}</td>
-                                    <td class="px-6 py-4 text-center">
-                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full ${job.vac > 0 ? 'bg-red-100 text-red-700 font-bold' : 'bg-green-100 text-green-700'}">
-                                            ${job.vac}
-                                        </span>
-                                    </td>
+                                     <td class="center"><span contenteditable="true" data-ref="${job.ref}" data-field="cap" onblur="handleOverrideBlur(this)" style="font-weight:600;color:var(--text-secondary);">${(jobOverrides[job.ref] && jobOverrides[job.ref].cap !== undefined) ? jobOverrides[job.ref].cap : job.cap}</span></td>
+                                     <td class="center"><span contenteditable="true" data-ref="${job.ref}" data-field="act" onblur="handleOverrideBlur(this)" style="font-weight:600;color:var(--text-secondary);">${(jobOverrides[job.ref] && jobOverrides[job.ref].act !== undefined) ? jobOverrides[job.ref].act : job.actual}</span></td>
+                                     <td class="center">
+                                         <span contenteditable="true" data-ref="${job.ref}" data-field="vac" onblur="handleOverrideBlur(this)" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-weight:700;font-size:13px;${((jobOverrides[job.ref] && jobOverrides[job.ref].vac !== undefined) ? jobOverrides[job.ref].vac : job.vac) > 0 ? 'background:#fee2e2;color:#b91c1c;' : 'background:#dcfce7;color:#15803d;'}">
+                                             ${(jobOverrides[job.ref] && jobOverrides[job.ref].vac !== undefined) ? jobOverrides[job.ref].vac : job.vac}
+                                         </span>
+                                     </td>
                                 </tr>
                             `;
                 }).join('')}
@@ -550,18 +1404,32 @@
                 contentArea.appendChild(section);
             });
 
-            // Re-init icons for new content
             lucide.createIcons();
         }
 
-        // Simple Excel Export (Table to Excel logic simplified)
         function exportTableToExcel() {
-            // In a real app, we would re-generate the SheetJS workbook from the processed JSON data
-            // to ensure high fidelity. For this demo, we can just alert or imply functionality.
             alert("Tato funkce by v plné verzi stáhla vygenerovaný Excel soubor se strukturou, kterou jsme dělali v Pythonu.");
         }
 
-        // Toggle expand for collapsible candidate groups
+        function moveRowUp(btn) {
+            const tr = btn.closest('tr');
+            const prev = tr.previousElementSibling;
+            if (prev) tr.parentElement.insertBefore(tr, prev);
+        }
+
+        function moveRowDown(btn) {
+            const tr = btn.closest('tr');
+            const next = tr.nextElementSibling;
+            if (next) tr.parentElement.insertBefore(next, tr);
+        }
+
+        function deleteRow(btn) {
+            const tr = btn.closest('tr');
+            if (confirm(`Smazat pozici "${tr.querySelector('td:nth-child(2) div')?.textContent?.trim() || '?'}"?`)) {
+                tr.remove();
+            }
+        }
+
         function toggleExpand(uid) {
             const collapseEl = document.getElementById('collapse-' + uid);
             const btnEl = document.getElementById('btn-' + uid);
@@ -571,8 +1439,147 @@
             if (btnEl) btnEl.style.display = isHidden ? 'none' : '';
         }
 
-        // Try to load previously uploaded file on app start
-        window.addEventListener('load', loadFileFromDB);
+        function addNameToRow(btn, chipStyle) {
+            const name = prompt('Jméno kandidáta:');
+            if (!name || !name.trim()) return;
+            const container = btn.parentElement;
+            const chip = document.createElement('span');
+            chip.className = `candidate-chip inline-flex items-center gap-1 px-2 py-0.5 rounded ${chipStyle} text-xs font-medium`;
+            chip.innerHTML = `<span contenteditable="true" class="outline-none">${name.trim()}</span><span class="chip-remove" onclick="this.closest('.candidate-chip').remove()" title="Odebrat">&times;</span>`;
+            container.insertBefore(chip, btn);
+        }
+
+        const ALL_PHASES = [
+            { key: 'HIRED', label: 'Hired', labelStyle: 'text-red-600 font-semibold', chipStyle: 'bg-red-50 text-red-700 border border-red-200' },
+            { key: 'HIRED_PAST', label: 'Hired in past', labelStyle: 'text-red-400 font-semibold', chipStyle: 'bg-red-50 text-red-400 border border-red-100' },
+            { key: 'FOR_INTERVIEW', label: 'For interview', labelStyle: 'text-green-700 font-semibold', chipStyle: 'bg-green-50 text-green-700 border border-green-200' },
+            { key: 'AFTER_INTERVIEW', label: 'After interview', labelStyle: 'text-emerald-700 font-semibold', chipStyle: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+            { key: 'OFFER_REFUSED', label: 'Offer refused', labelStyle: 'text-slate-500 font-medium', chipStyle: 'bg-slate-100 text-slate-500 border border-slate-200' },
+            { key: 'NO_SHOW', label: 'No show', labelStyle: 'text-slate-500 font-medium', chipStyle: 'bg-slate-100 text-slate-500 border border-slate-200' },
+            { key: 'NO_AFTER', label: 'No after interview', labelStyle: 'text-slate-500 font-medium', chipStyle: 'bg-slate-100 text-slate-500 border border-slate-200 line-through' },
+        ];
+
+        function showPhaseDropdown(event, trigger) {
+            event.stopPropagation();
+            document.querySelectorAll('.phase-dropdown').forEach(el => el.remove());
+
+            const dropdown = document.createElement('div');
+            dropdown.className = 'phase-dropdown';
+            ALL_PHASES.forEach(phase => {
+                const btn = document.createElement('button');
+                btn.className = phase.labelStyle;
+                btn.textContent = phase.label;
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    addPhaseRow(trigger, phase);
+                    dropdown.remove();
+                };
+                dropdown.appendChild(btn);
+            });
+
+            const rect = trigger.getBoundingClientRect();
+            dropdown.style.position = 'fixed';
+            dropdown.style.left = rect.left + 'px';
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+            document.body.appendChild(dropdown);
+
+            setTimeout(() => {
+                document.addEventListener('click', function closeDropdown() {
+                    dropdown.remove();
+                    document.removeEventListener('click', closeDropdown);
+                }, { once: true });
+            }, 0);
+        }
+
+        function addPhaseRow(trigger, phase) {
+            const statusContainer = trigger.closest('.flex.flex-col');
+            const row = document.createElement('div');
+            row.className = 'phase-row flex items-start gap-2 py-0.5';
+            row.innerHTML = `
+                <span class="text-xs w-32 shrink-0 mt-0.5 ${phase.labelStyle}">${phase.label}</span>
+                <div class="flex flex-wrap gap-1 items-center">
+                    <span class="add-name-btn text-xs text-slate-400 hover:text-sky-500 px-1 rounded hover:bg-sky-50" onclick="addNameToRow(this, '${phase.chipStyle}')" title="Přidat jméno">+</span>
+                </div>
+            `;
+            statusContainer.insertBefore(row, trigger.closest('.relative'));
+            addNameToRow(row.querySelector('.add-name-btn'), phase.chipStyle);
+        }
+
+        // Save CAP/ACT/VAC override when user finishes editing
+        function handleOverrideBlur(el) {
+            const refNumber = el.dataset.ref;
+            const field = el.dataset.field;
+            const rawValue = el.textContent.trim();
+            const value = parseInt(rawValue, 10);
+            if (!refNumber || !field) return;
+            if (!isNaN(value)) {
+                saveJobOverride(refNumber, field, value);
+                // Update VAC circle color live
+                if (field === 'vac') {
+                    el.style.background = value > 0 ? '#fee2e2' : '#dcfce7';
+                    el.style.color = value > 0 ? '#b91c1c' : '#15803d';
+                }
+            }
+        }
+
+        /**
+         * Step 5 — Real-time listener on /latestReport.
+         * When any user pushes a new report to Firebase, all connected browsers
+         * automatically receive the update and re-render the dashboard.
+         * Falls back to IndexedDB (offline mode) if Firebase is not configured.
+         */
+        let _lastSeenUploadId = null;
+
+        function startFirebaseListener() {
+            if (!FIREBASE_ENABLED) {
+                // Offline mode: use IndexedDB as before
+                loadFileFromDB();
+                return;
+            }
+
+            db.ref('latestReport').on('value', async (snapshot) => {
+                const meta = snapshot.val();
+                if (!meta || !meta.uploadId) return;
+
+                // Avoid re-rendering when WE pushed the report (same session)
+                if (meta.uploadId === _lastSeenUploadId) return;
+                _lastSeenUploadId = meta.uploadId;
+
+                try {
+                    const reportSnap = await db.ref(`reports/${meta.uploadId}`).get();
+                    const rawData = reportSnap.val();
+                    if (!rawData || !rawData.branches) return;
+
+                    // Convert Firebase structure back to grouped {branch: [jobs]}
+                    const groupedData = {};
+                    for (const [branchKey, branchData] of Object.entries(rawData.branches)) {
+                        const branchName = branchData.name || branchKey;
+                        groupedData[branchName] = [];
+                        for (const [jobId, jobData] of Object.entries(branchData.jobs || {})) {
+                            const candidates = Object.entries(jobData.candidates || {}).map(([id, c]) => ({
+                                id, ...c
+                            }));
+                            groupedData[branchName].push({ jobId, ...jobData, candidates });
+                        }
+                    }
+
+                    const jobOverrides = await loadAllJobOverrides();
+
+                    dropZone.style.display = 'none';
+                    dashboard.classList.remove('hidden');
+                    document.getElementById('exportBtn').classList.remove('hidden');
+
+                    renderDashboard(groupedData, jobOverrides);
+                    console.info(`[Firebase] Dashboard updated from report: ${meta.uploadId}`);
+                } catch (err) {
+                    console.error('[Firebase] Failed to load report from Firebase:', err);
+                    // Fallback to IndexedDB
+                    loadFileFromDB();
+                }
+            });
+        }
+
+        window.addEventListener('load', startFirebaseListener);
 
     </script>
 </body>
