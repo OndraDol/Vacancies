@@ -119,5 +119,5 @@ The application expects an Excel `.xlsx` file exported from the ATS.
   * Candidate chip rename / delete → `update()` / `remove()`
   * Add candidate / add phase → `db.ref(...).push()`
   * Delete job / move job → update order in Firebase
-- [ ] **Step 7:** Fill in real `FIREBASE_CONFIG` values from Firebase Console (Project settings → Your apps → Config snippet)
+- [x] **Step 7:** Fill in real `FIREBASE_CONFIG` values from Firebase Console
 - [ ] **Step 8:** Deploy to GitHub Pages
