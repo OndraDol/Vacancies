@@ -14,6 +14,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
 
@@ -721,6 +724,9 @@
             </div>
         </div>
         <div class="flex gap-3">
+            <button onclick="toggleStatsView()" id="statsBtn" class="btn-upload hidden">
+                <i data-lucide="bar-chart-3" class="w-4 h-4" style="color:var(--brand-500)"></i> Statistiky
+            </button>
             <button onclick="document.getElementById('fileInput').click()" class="btn-upload">
                 <i data-lucide="upload" class="w-4 h-4" style="color:var(--brand-500)"></i> Nahrát report
             </button>
@@ -776,6 +782,17 @@
 
             <div id="contentArea"></div>
         </div>
+
+        <!-- Statistics Panel -->
+        <div id="statsPanel" class="hidden max-w-7xl mx-auto fade-in" style="padding-bottom:40px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                <h2 style="font-size:22px;font-weight:800;color:var(--text-primary);letter-spacing:-0.02em;">📊 HR
+                    Analytika</h2>
+                <button onclick="toggleStatsView()" class="btn-upload"><i data-lucide="arrow-left" class="w-4 h-4"
+                        style="color:var(--brand-500)"></i> Zpět na dashboard</button>
+            </div>
+            <div id="statsContent"></div>
+        </div>
     </main>
 
     <script>
@@ -811,6 +828,25 @@
         const fileInput = document.getElementById('fileInput');
         const dashboard = document.getElementById('dashboard');
         const contentArea = document.getElementById('contentArea');
+        const statsPanel = document.getElementById('statsPanel');
+        const statsContent = document.getElementById('statsContent');
+
+        // Global: last parsed report data for stats
+        let _lastReportData = null;
+        let _statsView = false;
+
+        function toggleStatsView() {
+            _statsView = !_statsView;
+            if (_statsView) {
+                dashboard.classList.add('hidden');
+                statsPanel.classList.remove('hidden');
+                if (_lastReportData) renderStats(_lastReportData);
+                lucide.createIcons();
+            } else {
+                statsPanel.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+            }
+        }
 
         // Setup IndexedDB for local testing persistence
         const DB_NAME = 'AuresDashboardDB';
@@ -974,6 +1010,8 @@
 
                     const report = generateReport(jobsData, candidatesData);
                     renderDashboard(report, jobOverrides);
+                    _lastReportData = report;
+                    document.getElementById('statsBtn').classList.remove('hidden');
                     document.getElementById('exportBtn').classList.remove('hidden');
 
                     // Step 4: Push to Firebase if configured
@@ -1594,11 +1632,314 @@
                     document.getElementById('exportBtn').classList.remove('hidden');
 
                     renderDashboard(groupedData, jobOverrides);
+                    _lastReportData = groupedData;
+                    document.getElementById('statsBtn').classList.remove('hidden');
                     console.info(`[Firebase] Dashboard updated from report: ${meta.uploadId}`);
                 } catch (err) {
                     console.error('[Firebase] Failed to load report from Firebase:', err);
                     // Fallback to IndexedDB
                     loadFileFromDB();
+                }
+            });
+        }
+
+        // ── Statistics Rendering ─────────────────────────────────────
+        const _chartInstances = [];
+
+        function destroyCharts() {
+            _chartInstances.forEach(c => { try { c.destroy(); } catch (e) { } });
+            _chartInstances.length = 0;
+        }
+
+        function createChart(canvas, config) {
+            const inst = new Chart(canvas, config);
+            _chartInstances.push(inst);
+            return inst;
+        }
+
+        function renderStats(groupedData) {
+            destroyCharts();
+            statsContent.innerHTML = '';
+
+            // ── Flatten all jobs & candidates ──
+            const allJobs = [];
+            const branchStats = {};
+            const divisionStats = {};
+            const recruiterStats = {};
+            let totalVac = 0, totalPositions = 0;
+            let totalHired = 0, totalForInterview = 0, totalAfterInterview = 0;
+            let totalOfferRefused = 0, totalNoShow = 0, totalNoAfter = 0;
+            let totalCandidates = 0;
+            let ageSum = 0;
+            const ageBuckets = { '0–14': 0, '15–30': 0, '31–60': 0, '61–90': 0, '90+': 0 };
+
+            for (const [branch, jobs] of Object.entries(groupedData)) {
+                if (!branchStats[branch]) branchStats[branch] = { positions: 0, vac: 0, candidates: 0, hired: 0 };
+                for (const job of jobs) {
+                    allJobs.push(job);
+                    totalPositions++;
+                    totalVac += job.vac;
+                    ageSum += job.daysOpen;
+                    branchStats[branch].positions++;
+                    branchStats[branch].vac += job.vac;
+
+                    // Age buckets
+                    if (job.daysOpen <= 14) ageBuckets['0–14']++;
+                    else if (job.daysOpen <= 30) ageBuckets['15–30']++;
+                    else if (job.daysOpen <= 60) ageBuckets['31–60']++;
+                    else if (job.daysOpen <= 90) ageBuckets['61–90']++;
+                    else ageBuckets['90+']++;
+
+                    // Division
+                    const div = job.division || 'Ostatní';
+                    if (!divisionStats[div]) divisionStats[div] = { positions: 0, vac: 0, hired: 0 };
+                    divisionStats[div].positions++;
+                    divisionStats[div].vac += job.vac;
+
+                    // Recruiter
+                    const rec = job.recruiter || '-';
+                    if (!recruiterStats[rec]) recruiterStats[rec] = { positions: 0, vac: 0, hired: 0, candidates: 0 };
+                    recruiterStats[rec].positions++;
+                    recruiterStats[rec].vac += job.vac;
+
+                    for (const c of job.candidates) {
+                        totalCandidates++;
+                        branchStats[branch].candidates++;
+                        recruiterStats[rec].candidates++;
+                        if (c.category === 'HIRED' || c.category === 'HIRED_PAST') {
+                            totalHired++;
+                            branchStats[branch].hired++;
+                            divisionStats[div].hired++;
+                            recruiterStats[rec].hired++;
+                        }
+                        else if (c.category === 'FOR_INTERVIEW') totalForInterview++;
+                        else if (c.category === 'AFTER_INTERVIEW') totalAfterInterview++;
+                        else if (c.category === 'OFFER_REFUSED') totalOfferRefused++;
+                        else if (c.category === 'NO_SHOW') totalNoShow++;
+                        else if (c.category === 'NO_AFTER') totalNoAfter++;
+                    }
+                }
+            }
+
+            const avgAge = totalPositions > 0 ? Math.round(ageSum / totalPositions) : 0;
+            const hiringRate = totalCandidates > 0 ? Math.round((totalHired / totalCandidates) * 100) : 0;
+            const positionsOver60 = allJobs.filter(j => j.daysOpen > 60).length;
+            const positionsOver90 = allJobs.filter(j => j.daysOpen > 90).length;
+
+            // ── Card helper ──
+            const card = (title, content, span = '') => `
+                <div class="branch-card" style="padding:20px;${span}">
+                    <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:14px;letter-spacing:-0.01em;">${title}</div>
+                    ${content}
+                </div>`;
+
+            const kpiMini = (label, value, color = 'var(--text-primary)') => `
+                <div style="text-align:center;padding:8px;">
+                    <div style="font-size:28px;font-weight:800;color:${color};letter-spacing:-0.03em;">${value}</div>
+                    <div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px;">${label}</div>
+                </div>`;
+
+            // ── Build HTML ──
+            let html = '';
+
+            // Row 1: Key KPIs
+            html += `<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:16px;">`;
+            html += card('', kpiMini('Otevřených pozic', totalPositions));
+            html += card('', kpiMini('Volná místa (VAC)', totalVac, 'var(--brand-500)'));
+            html += card('', kpiMini('Přijato / Hired', totalHired, '#10b981'));
+            html += card('', kpiMini('K pohovoru', totalForInterview + totalAfterInterview, '#f59e0b'));
+            html += card('', kpiMini('Ø stáří pozice', avgAge + ' dní', avgAge > 45 ? '#ef4444' : 'var(--text-secondary)'));
+            html += card('', kpiMini('Hiring rate', hiringRate + '%', hiringRate > 20 ? '#10b981' : '#f59e0b'));
+            html += `</div>`;
+
+            // Row 2: Warning KPIs
+            html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">`;
+            html += card('', kpiMini('Pozic > 60 dní', positionsOver60, positionsOver60 > 0 ? '#ef4444' : '#10b981'));
+            html += card('', kpiMini('Pozic > 90 dní', positionsOver90, positionsOver90 > 0 ? '#ef4444' : '#10b981'));
+            html += card('', kpiMini('Odmítnuté nabídky', totalOfferRefused, totalOfferRefused > 3 ? '#ef4444' : 'var(--text-secondary)'));
+            html += card('', kpiMini('No-show', totalNoShow, totalNoShow > 2 ? '#ef4444' : 'var(--text-secondary)'));
+            html += `</div>`;
+
+            // Row 3: Charts - VAC by Branch + VAC by Division
+            html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">`;
+            html += card('VAC dle pobočky', '<canvas id="chartVacBranch" height="260"></canvas>');
+            html += card('VAC dle divize', '<canvas id="chartVacDivision" height="260"></canvas>');
+            html += `</div>`;
+
+            // Row 4: Pipeline funnel + Age distribution
+            html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">`;
+            html += card('Pipeline kandidátů', '<canvas id="chartPipeline" height="240"></canvas>');
+            html += card('Stáří pozic (distribuce)', '<canvas id="chartAge" height="240"></canvas>');
+            html += `</div>`;
+
+            // Row 5: Recruiter workload table
+            const recEntries = Object.entries(recruiterStats).sort((a, b) => b[1].positions - a[1].positions);
+            let recTable = `<table style="width:100%;font-size:12px;border-collapse:collapse;">
+                <thead><tr style="border-bottom:2px solid var(--brand-100);">
+                    <th style="text-align:left;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Konzultant</th>
+                    <th style="text-align:center;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Pozice</th>
+                    <th style="text-align:center;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">VAC</th>
+                    <th style="text-align:center;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Kandidáti</th>
+                    <th style="text-align:center;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Hired</th>
+                </tr></thead><tbody>`;
+            for (const [name, s] of recEntries) {
+                recTable += `<tr style="border-bottom:1px solid #e8edf2;">
+                    <td style="padding:8px 8px;font-weight:600;color:var(--text-primary);">${name}</td>
+                    <td style="text-align:center;padding:8px;">${s.positions}</td>
+                    <td style="text-align:center;padding:8px;font-weight:700;color:var(--brand-500);">${s.vac}</td>
+                    <td style="text-align:center;padding:8px;">${s.candidates}</td>
+                    <td style="text-align:center;padding:8px;font-weight:600;color:#10b981;">${s.hired}</td>
+                </tr>`;
+            }
+            recTable += `</tbody></table>`;
+
+            // Row 5b: Positions by branch table
+            const branchEntries = Object.entries(branchStats).sort((a, b) => b[1].vac - a[1].vac);
+            let branchTable = `<table style="width:100%;font-size:12px;border-collapse:collapse;">
+                <thead><tr style="border-bottom:2px solid var(--brand-100);">
+                    <th style="text-align:left;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Pobočka</th>
+                    <th style="text-align:center;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Pozice</th>
+                    <th style="text-align:center;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">VAC</th>
+                    <th style="text-align:center;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Kandidáti</th>
+                    <th style="text-align:center;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Hired</th>
+                </tr></thead><tbody>`;
+            for (const [name, s] of branchEntries) {
+                branchTable += `<tr style="border-bottom:1px solid #e8edf2;">
+                    <td style="padding:8px;font-weight:600;color:var(--text-primary);">${name}</td>
+                    <td style="text-align:center;padding:8px;">${s.positions}</td>
+                    <td style="text-align:center;padding:8px;font-weight:700;color:var(--brand-500);">${s.vac}</td>
+                    <td style="text-align:center;padding:8px;">${s.candidates}</td>
+                    <td style="text-align:center;padding:8px;font-weight:600;color:#10b981;">${s.hired}</td>
+                </tr>`;
+            }
+            branchTable += `</tbody></table>`;
+
+            html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">`;
+            html += card('Workload HR konzultantů', recTable);
+            html += card('Přehled dle poboček', branchTable);
+            html += `</div>`;
+
+            // Row 6: Top 10 longest open positions
+            const topOld = [...allJobs].sort((a, b) => b.daysOpen - a.daysOpen).slice(0, 10);
+            let oldTable = `<table style="width:100%;font-size:12px;border-collapse:collapse;">
+                <thead><tr style="border-bottom:2px solid var(--brand-100);">
+                    <th style="text-align:left;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Pozice</th>
+                    <th style="text-align:left;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Divize</th>
+                    <th style="text-align:center;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Dní</th>
+                    <th style="text-align:center;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">VAC</th>
+                    <th style="text-align:left;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Konzultant</th>
+                </tr></thead><tbody>`;
+            for (const j of topOld) {
+                oldTable += `<tr style="border-bottom:1px solid #e8edf2;">
+                    <td style="padding:8px;font-weight:600;color:var(--text-primary);">${j.position}</td>
+                    <td style="padding:8px;color:var(--text-secondary);">${j.division || '-'}</td>
+                    <td style="text-align:center;padding:8px;font-weight:700;color:${j.daysOpen > 60 ? '#ef4444' : 'var(--text-secondary)'};">${j.daysOpen}</td>
+                    <td style="text-align:center;padding:8px;font-weight:700;color:var(--brand-500);">${j.vac}</td>
+                    <td style="padding:8px;color:var(--text-secondary);">${j.recruiter || '-'}</td>
+                </tr>`;
+            }
+            oldTable += `</tbody></table>`;
+            html += card('🚨 TOP 10 nejdéle otevřených pozic', oldTable);
+
+            statsContent.innerHTML = html;
+
+            // ── Render Charts ──
+
+            // 1. VAC by Branch (horizontal bar)
+            const branchLabels = branchEntries.map(e => e[0]);
+            const branchVacs = branchEntries.map(e => e[1].vac);
+            createChart(document.getElementById('chartVacBranch'), {
+                type: 'bar',
+                data: {
+                    labels: branchLabels,
+                    datasets: [{
+                        label: 'VAC',
+                        data: branchVacs,
+                        backgroundColor: 'rgba(14, 165, 233, 0.7)',
+                        borderRadius: 6,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } },
+                        y: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11, weight: 600 } } }
+                    }
+                }
+            });
+
+            // 2. VAC by Division (horizontal bar)
+            const divEntries = Object.entries(divisionStats).sort((a, b) => b[1].vac - a[1].vac);
+            createChart(document.getElementById('chartVacDivision'), {
+                type: 'bar',
+                data: {
+                    labels: divEntries.map(e => e[0]),
+                    datasets: [{
+                        label: 'VAC',
+                        data: divEntries.map(e => e[1].vac),
+                        backgroundColor: 'rgba(56, 189, 248, 0.7)',
+                        borderRadius: 6,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } },
+                        y: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11, weight: 600 } } }
+                    }
+                }
+            });
+
+            // 3. Pipeline (doughnut)
+            createChart(document.getElementById('chartPipeline'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Hired', 'K pohovoru', 'Po pohovoru', 'Odmítnutá nabídka', 'No-show', 'Zamítnuto po poh.'],
+                    datasets: [{
+                        data: [totalHired, totalForInterview, totalAfterInterview, totalOfferRefused, totalNoShow, totalNoAfter],
+                        backgroundColor: ['#ef4444', '#22c55e', '#059669', '#94a3b8', '#cbd5e1', '#e2e8f0'],
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { family: 'Inter', size: 11 }, padding: 12 } },
+                    }
+                }
+            });
+
+            // 4. Age distribution (bar)
+            createChart(document.getElementById('chartAge'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(ageBuckets).map(k => k + ' dní'),
+                    datasets: [{
+                        label: 'Počet pozic',
+                        data: Object.values(ageBuckets),
+                        backgroundColor: ['#10b981', '#22c55e', '#f59e0b', '#f97316', '#ef4444'],
+                        borderRadius: 6,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11, weight: 600 } } },
+                        y: { beginAtZero: true, grid: { color: 'rgba(14,165,233,0.05)' }, ticks: { font: { family: 'Inter', size: 11 } } }
+                    }
                 }
             });
         }
