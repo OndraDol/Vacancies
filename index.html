@@ -423,34 +423,36 @@
         /* ── Section cards ───────────────────────── */
         .branch-card {
             background: white;
-            border-radius: 14px;
+            border-radius: 16px;
             border: 1px solid var(--border-light);
             overflow: hidden;
-            margin-bottom: 10px;
-            transition: border-color 0.2s ease;
+            margin-bottom: 16px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.04);
         }
 
         .branch-card:hover {
             border-color: var(--border-medium);
+            box-shadow: 0 4px 20px rgba(14, 165, 233, 0.09);
         }
 
         .branch-header {
             background: linear-gradient(90deg, var(--brand-50) 0%, white 100%);
-            border-bottom: 1px solid rgba(14, 165, 233, 0.06);
-            padding: 12px 20px;
+            border-bottom: 2px solid rgba(14, 165, 233, 0.10);
+            padding: 14px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .branch-name {
-            font-size: 14px;
-            font-weight: 700;
+            font-size: 15px;
+            font-weight: 800;
             color: var(--text-primary);
             display: flex;
             align-items: center;
             gap: 8px;
-            letter-spacing: -0.01em;
+            letter-spacing: -0.02em;
         }
 
         .branch-count {
@@ -469,8 +471,8 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-top: 28px;
-            margin-bottom: 10px;
+            margin-top: 36px;
+            margin-bottom: 14px;
         }
 
         .region-label {
@@ -500,7 +502,7 @@
         }
 
         .vacancy-table thead th {
-            padding: 10px 14px;
+            padding: 11px 16px;
             font-size: 10px;
             font-weight: 700;
             letter-spacing: 0.1em;
@@ -508,7 +510,12 @@
             color: var(--text-muted);
             background: var(--brand-50);
             text-align: left;
-            border-bottom: 1px solid var(--brand-100);
+            border-bottom: 2px solid var(--brand-100);
+            border-right: 1px solid rgba(14, 165, 233, 0.08);
+        }
+
+        .vacancy-table thead th:last-child {
+            border-right: none;
         }
 
         .vacancy-table thead th.center {
@@ -516,8 +523,13 @@
         }
 
         .vacancy-table tbody tr {
-            border-bottom: 1px solid rgba(14, 165, 233, 0.04);
+            border-bottom: 1px solid rgba(14, 165, 233, 0.08);
             transition: background 0.15s ease;
+        }
+
+        /* Zebra striping for easier row scanning */
+        .vacancy-table tbody tr:nth-child(even) {
+            background: rgba(14, 165, 233, 0.018);
         }
 
         .vacancy-table tbody tr:last-child {
@@ -525,13 +537,18 @@
         }
 
         .vacancy-table tbody tr:hover {
-            background: rgba(14, 165, 233, 0.02);
+            background: rgba(14, 165, 233, 0.05) !important;
         }
 
         .vacancy-table td {
-            padding: 12px 14px;
+            padding: 14px 16px;
             vertical-align: top;
             color: var(--text-primary);
+            border-right: 1px solid rgba(14, 165, 233, 0.06);
+        }
+
+        .vacancy-table td:last-child {
+            border-right: none;
         }
 
         .vacancy-table td.center {
