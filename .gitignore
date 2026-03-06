@@ -1,0 +1,8 @@
+# Excel / CSV data files - never commit raw reports
+*.xlsx
+*.xls
+*.csv
+
+# OS
+.DS_Store
+Thumbs.db
