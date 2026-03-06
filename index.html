@@ -13,6 +13,7 @@
     <!-- Firebase v10 SDKs (compat mode — global firebase object) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
     <!-- Chart.js for statistics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -707,10 +708,65 @@
             border-radius: 5px;
             border: 1px solid var(--brand-100);
         }
+
+        /* ── Login Overlay ───────────────────────── */
+        #loginOverlay {
+            position: fixed;
+            inset: 0;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s;
+        }
+
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px -10px rgba(14, 165, 233, 0.15), 0 0 0 1px var(--border-light);
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border-light);
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 20px;
+            margin-top: 10px;
+        }
+
+        .login-input:focus {
+            border-color: var(--brand-400);
+        }
     </style>
 </head>
 
 <body class="flex flex-col h-screen">
+
+    <!-- Login Overlay -->
+    <div id="loginOverlay" style="display: none;">
+        <div class="login-card">
+            <div class="upload-icon-wrap" style="margin: 0 auto 20px auto; width: 60px; height: 60px;">
+                <i data-lucide="lock" style="width: 24px; height: 24px; color: var(--brand-500);"></i>
+            </div>
+            <h2 class="upload-title" style="margin-bottom: 5px;">Přihlášení</h2>
+            <p class="upload-desc" style="margin-bottom: 20px;">Zadejte prosím heslo pro přístup k HR reportům.</p>
+            <input type="password" id="loginPassword" class="login-input" placeholder="Heslo..."
+                onkeydown="if(event.key === 'Enter') attemptLogin()">
+            <button id="loginBtn" onclick="attemptLogin()" class="btn-primary-upload"
+                style="width: 100%; padding: 12px; font-size: 15px;">Vstoupit</button>
+            <p id="loginError" style="color: #ef4444; font-size: 13px; margin-top: 15px; display: none;">Nesprávné
+                heslo. Zkuste to znovu.</p>
+        </div>
+    </div>
 
     <header class="app-header">
         <div class="logo-wrap">
@@ -2032,7 +2088,47 @@
             });
         }
 
-        window.addEventListener('load', startFirebaseListener);
+        const auth = firebase.auth();
+        const loginOverlay = document.getElementById('loginOverlay');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginError = document.getElementById('loginError');
+
+        function attemptLogin() {
+            const pwd = document.getElementById('loginPassword').value;
+            loginBtn.innerHTML = 'Ověřování...';
+            loginBtn.disabled = true;
+            loginError.style.display = 'none';
+
+            // We use a shared team account for the dashboard.
+            auth.signInWithEmailAndPassword('team@aures.cz', pwd).catch(error => {
+                loginError.style.display = 'block';
+                loginBtn.innerHTML = 'Vstoupit';
+                loginBtn.disabled = false;
+            });
+        }
+
+        window.addEventListener('load', () => {
+            if (!FIREBASE_ENABLED) {
+                // Offline mode, no login needed
+                startFirebaseListener();
+            } else {
+                // Check auth state
+                auth.onAuthStateChanged(user => {
+                    if (user) {
+                        // Logged in
+                        loginOverlay.style.opacity = '0';
+                        setTimeout(() => loginOverlay.style.display = 'none', 300);
+                        startFirebaseListener();
+                    } else {
+                        // Not logged in
+                        loginOverlay.style.display = 'flex';
+                        loginOverlay.style.opacity = '1';
+                        loginBtn.innerHTML = 'Vstoupit';
+                        loginBtn.disabled = false;
+                    }
+                });
+            }
+        });
 
     </script>
 </body>
