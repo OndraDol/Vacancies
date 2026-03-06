@@ -1914,14 +1914,14 @@
 
             // Row 3: Charts - VAC by Branch + VAC by Division
             html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">`;
-            html += card('VAC dle pobočky', '<canvas id="chartVacBranch" height="260"></canvas>');
-            html += card('VAC dle divize', '<canvas id="chartVacDivision" height="260"></canvas>');
+            html += card('VAC dle pobočky', '<div style="position:relative;height:280px;width:100%"><canvas id="chartVacBranch"></canvas></div>');
+            html += card('VAC dle divize', '<div style="position:relative;height:280px;width:100%"><canvas id="chartVacDivision"></canvas></div>');
             html += `</div>`;
 
             // Row 4: Pipeline funnel + Age distribution
             html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">`;
-            html += card('Pipeline kandidátů', '<canvas id="chartPipeline" height="240"></canvas>');
-            html += card('Stáří pozic (distribuce)', '<canvas id="chartAge" height="240"></canvas>');
+            html += card('Pipeline kandidátů', '<div style="position:relative;height:240px;width:100%"><canvas id="chartPipeline"></canvas></div>');
+            html += card('Stáří pozic (distribuce)', '<div style="position:relative;height:240px;width:100%"><canvas id="chartAge"></canvas></div>');
             html += `</div>`;
 
             // Row 5: Recruiter workload table
