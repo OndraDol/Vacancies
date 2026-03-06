@@ -11,6 +11,7 @@ It is currently transitioning from a **Single File Application (SFA)** running e
 * **Data Parsing:** [SheetJS (xlsx)](https://sheetjs.com/) (loaded via CDN)
 * **Icons:** [Lucide Icons](https://lucide.dev/) (loaded via CDN)
 * **Collaborative Backend:** [Firebase Realtime Database v10](https://firebase.google.com/) (compat mode, implementation in progress)
+* **Charts:** [Chart.js v4](https://www.chartjs.org/) (loaded via CDN — bar, doughnut charts)
 * **Hosting:** GitHub Pages (Planned) — repo: [OndraDol/Vacancies](https://github.com/OndraDol/Vacancies)
 
 ## 🔄 Architecture: Current State
@@ -103,6 +104,7 @@ The application expects an Excel `.xlsx` file exported from the ATS.
 | 2026-03-06 | **Firebase Step 5** — `startFirebaseListener()` with `onValue()` on `/latestReport`; auto-rerenders all clients on new upload; falls back to IndexedDB offline |
 | 2026-03-06 | **HR Consultant logic** — uses `Owner` field (one person); fallback to first name from `Recruiters` |
 | 2026-03-06 | **Visual separation** — stronger row borders, zebra striping, column dividers, larger branch card margins + shadow, animated left-border row accent on hover |
+| 2026-03-06 | **📊 HR Analytics page** — toggled via header button, includes: 10 summary KPIs, VAC by Branch chart, VAC by Division chart, Pipeline doughnut, Age distribution bar chart, Recruiter workload table, Branch comparison table, Top 10 longest open positions |
 
 ## 📝 Firebase Implementation Tasks
 
