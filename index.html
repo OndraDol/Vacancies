@@ -523,7 +523,7 @@
         }
 
         .vacancy-table tbody tr {
-            border-bottom: 1px solid rgba(14, 165, 233, 0.08);
+            border-bottom: 1px solid #e8edf2;
             transition: background 0.15s ease;
         }
 
@@ -537,7 +537,8 @@
         }
 
         .vacancy-table tbody tr:hover {
-            background: rgba(14, 165, 233, 0.05) !important;
+            background: rgba(14, 165, 233, 0.06) !important;
+            border-left-color: var(--brand-300) !important;
         }
 
         .vacancy-table td {
@@ -1143,6 +1144,12 @@
 
                 const jobId = crypto.randomUUID();   // stable ID for Firebase path
 
+                // HR Consultant: prefer Owner (always one person), fallback to first name in Recruiters
+                const owner = job['Owner'] || '';
+                const recruiterRaw = job['Recruiters'] || '';
+                const recruiterFirst = recruiterRaw.split(/[,;]/)[0].trim();
+                const hrConsultant = owner || recruiterFirst || '-';
+
                 grouped[place].push({
                     jobId,
                     ref: ref,
@@ -1156,7 +1163,7 @@
                     actual: cap - vac,
                     candidates: jobCandidates,
                     manager: job['Owner'],
-                    recruiter: job['Recruiters']
+                    recruiter: hrConsultant
                 });
             });
 
@@ -1373,7 +1380,7 @@
                     }).join('');
 
                     return `
-                                <tr>
+                                <tr style="border-left: 3px solid transparent; transition: border-color 0.15s;" onmouseenter="this.style.borderLeftColor='var(--brand-300)'" onmouseleave="this.style.borderLeftColor='transparent'">
                                     <td style="width:32px;padding:10px 6px;">
                                         <div class="row-controls" style="display:flex;flex-direction:column;align-items:center;gap:2px;">
                                             <button onclick="moveRowUp(this)" title="Posunout nahoru" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;line-height:1;padding:1px;" onmouseover="this.style.color='var(--brand-500)'" onmouseout="this.style.color='#94a3b8'">&#8593;</button>
