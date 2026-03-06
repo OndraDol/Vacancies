@@ -1912,8 +1912,9 @@
             html += card('', kpiMini('No-show', totalNoShow, totalNoShow > 2 ? '#ef4444' : 'var(--text-secondary)'));
             html += `</div>`;
 
-            // Row 3: Charts - VAC by Branch + VAC by Division
-            html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">`;
+            // Row 3: Charts - VAC by Branch + VAC by Division + VAC by Recruiter
+            html += `<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:14px;margin-bottom:16px;">`;
+            html += card('VAC dle HR konzultanta', '<div style="position:relative;height:280px;width:100%"><canvas id="chartVacRecruiter"></canvas></div>');
             html += card('VAC dle pobočky', '<div style="position:relative;height:280px;width:100%"><canvas id="chartVacBranch"></canvas></div>');
             html += card('VAC dle divize', '<div style="position:relative;height:280px;width:100%"><canvas id="chartVacDivision"></canvas></div>');
             html += `</div>`;
@@ -1925,7 +1926,7 @@
             html += `</div>`;
 
             // Row 5: Recruiter workload table
-            const recEntries = Object.entries(recruiterStats).sort((a, b) => b[1].positions - a[1].positions);
+            const recEntries = Object.entries(recruiterStats).sort((a, b) => b[1].vac - a[1].vac);
             let recTable = `<table style="width:100%;font-size:12px;border-collapse:collapse;">
                 <thead><tr style="border-bottom:2px solid var(--brand-100);">
                     <th style="text-align:left;padding:8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Konzultant</th>
@@ -1993,9 +1994,45 @@
             oldTable += `</tbody></table>`;
             html += card('🚨 TOP 10 nejdéle otevřených pozic', oldTable);
 
+            // Row 7: Additional Metrics (Bottom)
+            html += `<div style="display:flex;align-items:center;margin-top:36px;margin-bottom:16px;padding-top:20px;border-top:1px solid var(--border-light)">
+                <h3 style="font-size:16px;font-weight:800;color:var(--text-primary);">Doplňkové metriky úspěšnosti (Hiring Rate)</h3>
+            </div>`;
+            html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">`;
+            html += card('Hiring Rate (Přijatí / Kandidáti) dle Konzultanta (%)', '<div style="position:relative;height:260px;width:100%"><canvas id="chartHiringConversion"></canvas></div>');
+            html += card('Hiring Rate (Přijatí / Kandidáti) dle Divize (%)', '<div style="position:relative;height:260px;width:100%"><canvas id="chartHiringConversionDiv"></canvas></div>');
+            html += `</div>`;
+
             statsContent.innerHTML = html;
 
             // ── Render Charts ──
+
+            // 0. VAC by Recruiter
+            createChart(document.getElementById('chartVacRecruiter'), {
+                type: 'bar',
+                data: {
+                    labels: recEntries.map(e => e[0]),
+                    datasets: [{
+                        label: 'VAC',
+                        data: recEntries.map(e => e[1].vac),
+                        backgroundColor: 'rgba(56, 189, 248, 0.9)',
+                        borderRadius: 6,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } },
+                        y: {
+                            grid: { display: false }, ticks: { font: { family: 'Inter', size: 10, weight: 600 } },
+                            afterFit: function (scaleInstance) { scaleInstance.width = 120; }
+                        }
+                    }
+                }
+            });
 
             // 1. VAC by Branch (horizontal bar)
             const branchLabels = branchEntries.map(e => e[0]);
@@ -2094,6 +2131,51 @@
                     }
                 }
             });
+
+            // Additional bottom metrics charts
+            const recHiringEntries = Object.entries(recruiterStats).map(([name, s]) => ({ name, rate: s.candidates > 0 ? (s.hired / s.candidates * 100).toFixed(1) : 0 })).sort((a, b) => b.rate - a.rate);
+            const divHiringEntries = Object.entries(divisionStats).map(([name, s]) => ({ name, rate: s.candidates > 0 ? (s.hired / s.candidates * 100).toFixed(1) : 0 })).sort((a, b) => b.rate - a.rate);
+
+            if (document.getElementById('chartHiringConversion')) {
+                createChart(document.getElementById('chartHiringConversion'), {
+                    type: 'bar',
+                    data: {
+                        labels: recHiringEntries.map(e => e.name),
+                        datasets: [{
+                            label: 'Konverze (%)',
+                            data: recHiringEntries.map(e => e.rate),
+                            backgroundColor: '#10b981',
+                            borderRadius: 6,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw + '%' } } },
+                        scales: { y: { beginAtZero: true, max: 100 } }
+                    }
+                });
+            }
+            if (document.getElementById('chartHiringConversionDiv')) {
+                createChart(document.getElementById('chartHiringConversionDiv'), {
+                    type: 'bar',
+                    data: {
+                        labels: divHiringEntries.map(e => e.name),
+                        datasets: [{
+                            label: 'Konverze (%)',
+                            data: divHiringEntries.map(e => e.rate),
+                            backgroundColor: '#f59e0b',
+                            borderRadius: 6,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw + '%' } } },
+                        scales: { y: { beginAtZero: true, max: 100 } }
+                    }
+                });
+            }
         }
 
         const auth = firebase.auth();
