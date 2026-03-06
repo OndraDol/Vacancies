@@ -755,15 +755,23 @@
     <div id="loginOverlay" style="display: none;">
         <div class="login-card">
             <div class="upload-icon-wrap" style="margin: 0 auto 20px auto; width: 60px; height: 60px;">
-                <i data-lucide="mail" style="width: 24px; height: 24px; color: var(--brand-500);"></i>
+                <i data-lucide="lock" style="width: 24px; height: 24px; color: var(--brand-500);"></i>
             </div>
             <h2 class="upload-title" style="margin-bottom: 5px;">Aures Přihlášení</h2>
             <p class="upload-desc" style="margin-bottom: 20px;">Zadejte svůj pracovní <strong>@aaaauto.cz</strong> nebo
-                <strong>@auresholdings.eu</strong> e-mail.</p>
+                <strong>@auresholdings.eu</strong> e-mail a heslo.
+            </p>
             <input type="email" id="loginEmail" class="login-input" placeholder="jmeno.prijmeni@aures..."
-                onkeydown="if(event.key === 'Enter') sendLoginLink()">
-            <button id="loginBtn" onclick="sendLoginLink()" class="btn-primary-upload"
-                style="width: 100%; padding: 12px; font-size: 15px;">Zaslat přihlašovací odkaz</button>
+                style="margin-bottom: 10px;"
+                onkeydown="if(event.key === 'Enter') document.getElementById('loginPassword').focus()">
+            <input type="password" id="loginPassword" class="login-input" placeholder="Vaše heslo (min. 6 znaků)"
+                style="margin-top: 0; margin-bottom: 20px;" onkeydown="if(event.key === 'Enter') handleLogin(false)">
+            <div style="display: flex; gap: 10px;">
+                <button id="loginBtn" onclick="handleLogin(false)" class="btn-primary-upload"
+                    style="flex: 1; padding: 12px; font-size: 15px;">Přihlásit se</button>
+                <button id="registerBtn" onclick="handleLogin(true)" class="btn-upload"
+                    style="flex: 1; padding: 12px; font-size: 15px; justify-content: center;">Nová registrace</button>
+            </div>
             <p id="loginError" style="font-size: 13px; margin-top: 15px; display: none; line-height: 1.4;"></p>
         </div>
     </div>
@@ -2091,44 +2099,74 @@
         const auth = firebase.auth();
         const loginOverlay = document.getElementById('loginOverlay');
         const loginBtn = document.getElementById('loginBtn');
+        const registerBtn = document.getElementById('registerBtn');
         const loginError = document.getElementById('loginError');
 
-        function sendLoginLink() {
+        function handleLogin(isRegister) {
             const email = document.getElementById('loginEmail').value.trim();
-            loginBtn.innerHTML = 'Odesílám...';
-            loginBtn.disabled = true;
+            const password = document.getElementById('loginPassword').value;
+
             loginError.style.display = 'none';
+
+            if (!email || !password) {
+                loginError.textContent = 'Zadejte e-mail a heslo.';
+                loginError.style.color = '#ef4444';
+                loginError.style.display = 'block';
+                return;
+            }
 
             if (!email.toLowerCase().endsWith('@aaaauto.cz') && !email.toLowerCase().endsWith('@auresholdings.eu')) {
                 loginError.textContent = 'Přístup je povolen pouze pro e-maily @aaaauto.cz a @auresholdings.eu';
                 loginError.style.color = '#ef4444';
                 loginError.style.display = 'block';
-                loginBtn.innerHTML = 'Zaslat přihlašovací odkaz';
-                loginBtn.disabled = false;
                 return;
             }
 
-            const actionCodeSettings = {
-                url: window.location.href,
-                handleCodeInApp: true
-            };
+            if (password.length < 6) {
+                loginError.textContent = 'Heslo musí mít alespoň 6 znaků.';
+                loginError.style.color = '#ef4444';
+                loginError.style.display = 'block';
+                return;
+            }
 
-            auth.sendSignInLinkToEmail(email, actionCodeSettings)
-                .then(() => {
-                    window.localStorage.setItem('emailForSignIn', email);
-                    loginError.textContent = 'E-mail byl úspěšně odeslán. Zkontrolujte schránku a klikněte na odkaz uvnitř zpávy. Tuto stránku nyní můžete zavřít.';
-                    loginError.style.color = '#10b981';
-                    loginError.style.display = 'block';
-                    loginBtn.innerHTML = 'Odeslat znovu';
-                    loginBtn.disabled = false;
-                })
-                .catch((error) => {
-                    loginError.textContent = 'Došlo k chybě: ' + error.message;
-                    loginError.style.color = '#ef4444';
-                    loginError.style.display = 'block';
-                    loginBtn.innerHTML = 'Zaslat přihlašovací odkaz';
-                    loginBtn.disabled = false;
-                });
+            if (isRegister) {
+                registerBtn.innerHTML = 'Registruji...';
+                registerBtn.disabled = true;
+                loginBtn.disabled = true;
+
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then(() => {
+                        // state observer handles success
+                    })
+                    .catch((error) => {
+                        loginError.textContent = 'Chyba registrace: ' + error.message;
+                        if (error.code === 'auth/email-already-in-use') {
+                            loginError.textContent = 'Účet s tímto e-mailem již existuje. Použijte tlačítko Přihlásit se.';
+                        }
+                        loginError.style.color = '#ef4444';
+                        loginError.style.display = 'block';
+                        registerBtn.innerHTML = 'Nová registrace';
+                        registerBtn.disabled = false;
+                        loginBtn.disabled = false;
+                    });
+            } else {
+                loginBtn.innerHTML = 'Ověřování...';
+                loginBtn.disabled = true;
+                registerBtn.disabled = true;
+
+                auth.signInWithEmailAndPassword(email, password)
+                    .then(() => {
+                        // state observer handles success
+                    })
+                    .catch((error) => {
+                        loginError.textContent = 'Chyba přihlášení. Zkontrolujte e-mail a heslo.';
+                        loginError.style.color = '#ef4444';
+                        loginError.style.display = 'block';
+                        loginBtn.innerHTML = 'Přihlásit se';
+                        loginBtn.disabled = false;
+                        registerBtn.disabled = false;
+                    });
+            }
         }
 
         window.addEventListener('load', () => {
@@ -2136,33 +2174,6 @@
                 // Offline mode, no login needed
                 startFirebaseListener();
             } else {
-                // Check if returning from email link
-                if (auth.isSignInWithEmailLink(window.location.href)) {
-                    loginOverlay.style.display = 'flex';
-                    loginOverlay.style.opacity = '1';
-                    loginBtn.innerHTML = 'Ověřování...';
-                    loginBtn.disabled = true;
-
-                    let email = window.localStorage.getItem('emailForSignIn');
-                    if (!email) {
-                        email = window.prompt('Z bezpečnostních důvodů prosím zadejte znovu svůj pracovní e-mail.');
-                    }
-                    if (email) {
-                        auth.signInWithEmailLink(email, window.location.href)
-                            .then((result) => {
-                                window.localStorage.removeItem('emailForSignIn');
-                                window.history.replaceState(null, '', window.location.pathname); // clear URL params
-                            })
-                            .catch((error) => {
-                                loginError.textContent = 'Odkaz vypršel nebo je neplatný. Odešlete si nový.';
-                                loginError.style.color = '#ef4444';
-                                loginError.style.display = 'block';
-                                loginBtn.innerHTML = 'Zaslat přihlašovací odkaz';
-                                loginBtn.disabled = false;
-                            });
-                    }
-                }
-
                 // Global auth state
                 auth.onAuthStateChanged(user => {
                     if (user) {
@@ -2179,8 +2190,15 @@
                         // Not logged in
                         loginOverlay.style.display = 'flex';
                         loginOverlay.style.opacity = '1';
-                        loginBtn.innerHTML = 'Zaslat přihlašovací odkaz';
-                        loginBtn.disabled = false;
+                        // Reset buttons
+                        if (loginBtn) {
+                            loginBtn.innerHTML = 'Přihlásit se';
+                            loginBtn.disabled = false;
+                        }
+                        if (registerBtn) {
+                            registerBtn.innerHTML = 'Nová registrace';
+                            registerBtn.disabled = false;
+                        }
                     }
                 });
             }
