@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aures Vacancy Dashboard</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .drag-active {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <header class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm z-10">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 p-2 rounded-lg text-white">
+                <i data-lucide="bar-chart-2" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-slate-900">Aures Vacancy Report</h1>
+                <p class="text-xs text-slate-500 font-medium">HR Analytics Dashboard</p>
+            </div>
+        </div>
+        <div class="flex gap-4">
+            <button onclick="document.getElementById('fileInput').click()"
+                class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition text-sm font-medium">
+                <i data-lucide="upload-cloud" class="w-4 h-4"></i> Nahrát nový soubor
+            </button>
+            <button onclick="exportTableToExcel()" id="exportBtn"
+                class="hidden flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition text-sm font-medium shadow-md">
+                <i data-lucide="download" class="w-4 h-4"></i> Export do Excelu
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-auto p-8 relative">
+
+        <div id="dropZone"
+            class="absolute inset-0 m-8 border-2 border-dashed border-slate-300 rounded-xl bg-white flex flex-col justify-center items-center transition-all z-20">
+            <input type="file" id="fileInput" class="hidden" accept=".xlsx, .csv">
+            <div class="bg-blue-50 p-4 rounded-full mb-4">
+                <i data-lucide="file-spreadsheet" class="w-12 h-12 text-blue-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-700 mb-2">Nahrajte report z ATS</h2>
+            <p class="text-slate-500 mb-6">Přetáhněte sem soubor <code
+                    class="bg-slate-100 px-2 py-1 rounded text-slate-700">.xlsx</code> nebo klikněte pro výběr</p>
+            <button onclick="document.getElementById('fileInput').click()"
+                class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-lg transition transform hover:-translate-y-0.5">
+                Vybrat soubor
+            </button>
+        </div>
+
+        <div id="dashboard" class="hidden max-w-7xl mx-auto space-y-6">
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Celkem Pozic</p>
+                            <h3 class="text-3xl font-bold text-slate-800 mt-1" id="kpi-total">0</h3>
+                        </div>
+                        <div class="p-2 bg-slate-50 rounded-lg text-slate-400"><i data-lucide="briefcase"></i></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Volná Místa (VAC)</p>
+                            <h3 class="text-3xl font-bold text-blue-600 mt-1" id="kpi-vac">0</h3>
+                        </div>
+                        <div class="p-2 bg-blue-50 rounded-lg text-blue-500"><i data-lucide="users"></i></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Aktivní Nábory</p>
+                            <h3 class="text-3xl font-bold text-amber-500 mt-1" id="kpi-active">0</h3>
+                        </div>
+                        <div class="p-2 bg-amber-50 rounded-lg text-amber-500"><i data-lucide="activity"></i></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Úspěšné Nástupy</p>
+                            <h3 class="text-3xl font-bold text-green-600 mt-1" id="kpi-hired">0</h3>
+                        </div>
+                        <div class="p-2 bg-green-50 rounded-lg text-green-500"><i data-lucide="check-circle-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="contentArea" class="space-y-8">
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const dashboard = document.getElementById('dashboard');
+        const contentArea = document.getElementById('contentArea');
+
+        // Setup IndexedDB for local testing persistence
+        const DB_NAME = 'AuresDashboardDB';
+        const STORE_NAME = 'files';
+
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME);
+                    }
+                };
+                req.onsuccess = (e) => resolve(e.target.result);
+                req.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function saveFileToDB(buffer) {
+            try {
+                const db = await initDB();
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).put(buffer, 'lastUploadedFile');
+            } catch (e) {
+                console.warn('Failed to save to IndexedDB', e);
+            }
+        }
+
+        async function loadFileFromDB() {
+            try {
+                const db = await initDB();
+                if (!db.objectStoreNames.contains(STORE_NAME)) return;
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const req = tx.objectStore(STORE_NAME).get('lastUploadedFile');
+                req.onsuccess = (e) => {
+                    const buffer = e.target.result;
+                    if (buffer) {
+                        console.log('Restoring last uploaded file from IndexedDB...');
+                        processArrayBuffer(buffer);
+                    }
+                };
+            } catch (e) {
+                console.warn('Failed to load from IndexedDB', e);
+            }
+        }
+
+        // Drag & Drop Handlers
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-active'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
+        });
+
+        dropZone.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files), false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                const file = files[0];
+                processFile(file);
+            }
+        }
+
+        // Main Logic
+        async function processFile(file) {
+            // Show simple loading state logic if needed
+            dropZone.style.display = 'none';
+            dashboard.classList.remove('hidden');
+            contentArea.innerHTML = '<div class="flex justify-center py-20"><div class="loader"></div></div>';
+
+            const data = await file.arrayBuffer();
+            await saveFileToDB(data);
+
+            // Short delay to allow UI to render spinner
+            setTimeout(() => processArrayBuffer(data), 50);
+        }
+
+        function processArrayBuffer(data) {
+            dropZone.style.display = 'none';
+            dashboard.classList.remove('hidden');
+            contentArea.innerHTML = '<div class="flex justify-center py-20"><div class="loader"></div></div>';
+
+            // We use setTimeout to enable the UI to update with "loader" before the main thread blocks
+            setTimeout(() => {
+                try {
+                    const workbook = XLSX.read(data);
+
+                    // 1. Get Jobs Data
+                    let jobsSheetName = workbook.SheetNames.find(n => n.includes("Jobs"));
+                    if (!jobsSheetName) jobsSheetName = workbook.SheetNames[0]; // Fallback
+                    const jobsData = XLSX.utils.sheet_to_json(workbook.Sheets[jobsSheetName]);
+
+                    // 2. Get Hiring Process Data
+                    let hiringSheetName = workbook.SheetNames.find(n => n.includes("Hiring processes"));
+                    let candidatesData = [];
+                    if (hiringSheetName) {
+                        candidatesData = XLSX.utils.sheet_to_json(workbook.Sheets[hiringSheetName]);
+                    }
+
+                    // 3. Process Data
+                    const report = generateReport(jobsData, candidatesData);
+
+                    // 4. Render
+                    renderDashboard(report);
+                    document.getElementById('exportBtn').classList.remove('hidden');
+                } catch (error) {
+                    console.error("Error processing Excel file:", error);
+                    contentArea.innerHTML = '<div class="text-red-500 text-center py-10">Nastala chyba při čtení souboru. Zkontrolujte formát.</div>';
+                }
+            }, 50);
+        }
+
+        function parseExcelDate(excelDate) {
+            if (!excelDate) return null;
+            if (typeof excelDate === 'number') {
+                return new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+            }
+            try {
+                const d = new Date(excelDate);
+                return isNaN(d.getTime()) ? null : d;
+            } catch (e) { return null; }
+        }
+
+        function formatDate(excelDate) {
+            const d = parseExcelDate(excelDate);
+            if (!d) return "";
+            return `${d.getDate()}.${d.getMonth() + 1}.`;
+        }
+
+        function generateReport(jobs, candidates) {
+            // Group candidates by Ref. number
+            const candidatesByJob = {};
+            let hiredCount = 0;
+
+            candidates.forEach(c => {
+                const ref = c['Ref. number'];
+                if (!candidatesByJob[ref]) candidatesByJob[ref] = [];
+
+                // Normalize status
+                const status = (c['Last status'] || "").toLowerCase().trim();
+                const result = (c['Result'] || "").toLowerCase().trim();
+                const name = c['Candidate'] || "Unknown";
+
+                let category = 'OTHER';
+                let dateStr = "";
+
+                // Only statuses that clearly indicate a real interview took place and candidate was rejected
+                const POST_INTERVIEW_REJECTIONS = [
+                    'not qualified after internal interview',
+                    'favored a more appropriate candidate'
+                ];
+
+                if (result === 'accepted' || status === 'start date confirmed' || status === 'waiting for start date confirmation') {
+                    category = 'HIRED';
+                    dateStr = formatDate(c['Start date']);
+                    hiredCount++;
+                } else if (status === 'interview' || status === 'internal interview') {
+                    const interviewDate = parseExcelDate(c['Last interview'] || c['Last activity']);
+                    const isFuture = interviewDate && interviewDate > new Date();
+                    category = isFuture ? 'FOR_INTERVIEW' : 'AFTER_INTERVIEW';
+                    dateStr = formatDate(c['Last interview'] || c['Last activity']);
+                } else if (result === 'declined') {
+                    category = 'OFFER_REFUSED';
+                } else if (status === "didn't arrive at the interview") {
+                    category = 'NO_SHOW';
+                } else if (POST_INTERVIEW_REJECTIONS.includes(status)) {
+                    category = 'NO_AFTER';
+                }
+                // All other negatives (prescreen rejects, not interested, not responding etc.) → 'OTHER' = hidden
+
+                if (category !== 'OTHER') {
+                    candidatesByJob[ref].push({ name, category, date: dateStr, fullStatus: status });
+                }
+            });
+
+            // Filter Active Jobs
+            const activeJobs = jobs.filter(j => {
+                const status = (j['Job status'] || "").toLowerCase();
+                const leftToFill = parseInt(j['Headcount - left to fill'] || 0);
+                return status === 'active' || leftToFill > 0;
+            });
+
+            // Group by Branch (Place)
+            const grouped = {};
+            let totalVac = 0;
+
+            activeJobs.forEach(job => {
+                const place = job['Client branch'] || job['Branch'] || "Ostatní";
+                if (!grouped[place]) grouped[place] = [];
+
+                const ref = job['Ref. number'];
+                const jobCandidates = candidatesByJob[ref] || [];
+
+                // Calculations
+                const cap = parseInt(job['Headcount'] || 0);
+                const vac = parseInt(job['Headcount - left to fill'] || 0);
+                totalVac += vac;
+
+                // Time to fill
+                const created = parseExcelDate(job['Date created']);
+                let diffDays = 0;
+                if (created) {
+                    const now = new Date();
+                    const diffTime = Math.max(0, now - created);
+                    diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                }
+
+                grouped[place].push({
+                    ref: ref,
+                    position: job['Job vacancy'],
+                    division: job['Division'],
+                    department: job['Department in division'] || "",
+                    date: formatDate(job['Date created']),
+                    daysOpen: diffDays,
+                    cap: cap,
+                    vac: vac,
+                    actual: cap - vac,
+                    candidates: jobCandidates,
+                    manager: job['Owner'],
+                    recruiter: job['Recruiters']
+                });
+            });
+
+            // Update KPIs
+            document.getElementById('kpi-total').innerText = activeJobs.length;
+            document.getElementById('kpi-vac').innerText = totalVac;
+            document.getElementById('kpi-active').innerText = candidates.filter(c => (c['Last status'] || "").includes('interview')).length;
+            document.getElementById('kpi-hired').innerText = hiredCount; // Rough estimate based on filtered data
+
+            return grouped;
+        }
+
+        function renderDashboard(groupedData) {
+            contentArea.innerHTML = '';
+
+            // Sort Places alphabetically
+            const places = Object.keys(groupedData).sort();
+
+            places.forEach(place => {
+                const jobs = groupedData[place];
+                // Sort jobs by Division
+                jobs.sort((a, b) => (a.division || "").localeCompare(b.division || ""));
+
+                // Create Section
+                const section = document.createElement('div');
+                section.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8";
+
+                // Section Header
+                section.innerHTML = `
+                    <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="map-pin" class="w-5 h-5 text-blue-500"></i> ${place}
+                        </h2>
+                        <span class="bg-white border border-slate-200 px-3 py-1 rounded-full text-xs font-semibold text-slate-600">
+                            ${jobs.length} Pozic
+                        </span>
+                    </div>
+                `;
+
+                // Table
+                const tableWrapper = document.createElement('div');
+                tableWrapper.className = "overflow-x-auto";
+
+                const table = document.createElement('table');
+                table.className = "w-full text-left text-sm text-slate-600";
+
+                table.innerHTML = `
+                    <thead class="bg-slate-50 text-xs uppercase font-semibold text-slate-500">
+                        <tr>
+                            <th class="px-6 py-3">Pozice / Divize</th>
+                            <th class="px-6 py-3">Stáří</th>
+                            <th class="px-6 py-3">HR consultant</th>
+                            <th class="px-6 py-3 w-1/3">Status Kandidátů</th>
+                            <th class="px-6 py-3 text-center">CAP</th>
+                            <th class="px-6 py-3 text-center">VAC</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${jobs.map(job => {
+                    // Build structured candidate rows grouped by category
+                    const PHASES = [
+                        {
+                            key: 'HIRED',
+                            label: 'Hired',
+                            labelStyle: 'text-red-600 font-semibold',
+                            chipStyle: 'bg-red-50 text-red-700 border border-red-200'
+                        },
+                        {
+                            key: 'FOR_INTERVIEW',
+                            label: 'For interview',
+                            labelStyle: 'text-green-700 font-semibold',
+                            chipStyle: 'bg-green-50 text-green-700 border border-green-200'
+                        },
+                        {
+                            key: 'AFTER_INTERVIEW',
+                            label: 'After interview',
+                            labelStyle: 'text-emerald-700 font-semibold',
+                            chipStyle: 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        },
+                        {
+                            key: 'OFFER_REFUSED',
+                            label: 'Offer refused',
+                            labelStyle: 'text-slate-500 font-medium',
+                            chipStyle: 'bg-slate-100 text-slate-500 border border-slate-200',
+                            collapsible: true
+                        },
+                        {
+                            key: 'NO_SHOW',
+                            label: 'No show',
+                            labelStyle: 'text-slate-500 font-medium',
+                            chipStyle: 'bg-slate-100 text-slate-500 border border-slate-200',
+                            collapsible: true
+                        },
+                        {
+                            key: 'NO_AFTER',
+                            label: 'No after interview',
+                            labelStyle: 'text-slate-500 font-medium',
+                            chipStyle: 'bg-slate-100 text-slate-500 border border-slate-200 line-through',
+                            collapsible: true
+                        },
+                    ];
+
+                    const COLLAPSE_LIMIT = 3;
+
+                    const phaseRows = PHASES.map(phase => {
+                        const group = job.candidates.filter(c => c.category === phase.key);
+                        if (group.length === 0) return '';
+                        const collapse = phase.collapsible && group.length > COLLAPSE_LIMIT;
+                        const visibleGroup = collapse ? group.slice(0, COLLAPSE_LIMIT) : group;
+                        const hiddenGroup = collapse ? group.slice(COLLAPSE_LIMIT) : [];
+
+                        const makeChip = c =>
+                            `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded ${phase.chipStyle} text-xs font-medium">
+                                ${c.name}${c.date ? ` <span class="opacity-60 text-[10px]">(${c.date})</span>` : ''}
+                            </span>`;
+
+                        const visibleChips = visibleGroup.map(makeChip).join(' ');
+                        const hiddenChips = hiddenGroup.map(makeChip).join(' ');
+                        const uid = Math.random().toString(36).slice(2);
+
+                        const expandBtn = collapse
+                            ? `<button onclick="toggleExpand('${uid}')" id="btn-${uid}" class="text-xs text-slate-400 hover:text-slate-600 transition underline-offset-2 hover:underline whitespace-nowrap">+${hiddenGroup.length} více</button>
+                               <span id="collapse-${uid}" class="hidden flex flex-wrap gap-1">${hiddenChips}
+                                 <button onclick="toggleExpand('${uid}')" class="text-xs text-slate-400 hover:text-slate-600 transition underline-offset-2 hover:underline whitespace-nowrap">méně ↑</button>
+                               </span>`
+                            : '';
+
+                        return `<div class="flex items-start gap-2 py-0.5">
+                                    <span class="text-xs w-32 shrink-0 mt-0.5 ${phase.labelStyle}">${phase.label}</span>
+                                    <div class="flex flex-wrap gap-1 items-center">${visibleChips} ${expandBtn}</div>
+                                </div>`;
+                    }).join('');
+
+                    return `
+                                <tr class="hover:bg-slate-50 transition-colors group">
+                                    <td class="px-6 py-4">
+                                        <div class="font-bold text-slate-800 text-base">${job.position}</div>
+                                        <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                                            <span class="font-medium bg-slate-100 px-1.5 rounded">${job.division}</span>
+                                            <span class="text-slate-400">&bull;</span>
+                                            <span>${job.department}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="font-medium ${job.daysOpen > 60 ? 'text-red-500' : 'text-slate-700'}">${job.daysOpen} dní</div>
+                                        <div class="text-xs text-slate-400">${job.date}</div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-1.5 text-xs text-slate-500" title="HR consultant">
+                                            <i data-lucide="user-check" class="w-3 h-3 text-slate-400"></i> ${job.recruiter || '-'}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex flex-col gap-0.5">
+                                            ${phaseRows || '<span class="text-xs text-slate-400 italic">Žádná aktivita</span>'}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-center font-medium text-slate-500">${job.cap}</td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full ${job.vac > 0 ? 'bg-red-100 text-red-700 font-bold' : 'bg-green-100 text-green-700'}">
+                                            ${job.vac}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `;
+                }).join('')}
+                    </tbody>
+                `;
+
+                tableWrapper.appendChild(table);
+                section.appendChild(tableWrapper);
+                contentArea.appendChild(section);
+            });
+
+            // Re-init icons for new content
+            lucide.createIcons();
+        }
+
+        // Simple Excel Export (Table to Excel logic simplified)
+        function exportTableToExcel() {
+            // In a real app, we would re-generate the SheetJS workbook from the processed JSON data
+            // to ensure high fidelity. For this demo, we can just alert or imply functionality.
+            alert("Tato funkce by v plné verzi stáhla vygenerovaný Excel soubor se strukturou, kterou jsme dělali v Pythonu.");
+        }
+
+        // Toggle expand for collapsible candidate groups
+        function toggleExpand(uid) {
+            const collapseEl = document.getElementById('collapse-' + uid);
+            const btnEl = document.getElementById('btn-' + uid);
+            if (!collapseEl) return;
+            const isHidden = collapseEl.classList.contains('hidden');
+            collapseEl.classList.toggle('hidden', !isHidden);
+            if (btnEl) btnEl.style.display = isHidden ? 'none' : '';
+        }
+
+        // Try to load previously uploaded file on app start
+        window.addEventListener('load', loadFileFromDB);
+
+    </script>
+</body>
+
+</html>
