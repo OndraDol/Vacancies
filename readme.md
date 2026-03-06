@@ -106,6 +106,7 @@ The application expects an Excel `.xlsx` file exported from the ATS.
 | 2026-03-06 | **Visual separation** — stronger row borders, zebra striping, column dividers, larger branch card margins + shadow, animated left-border row accent on hover |
 | 2026-03-06 | **📊 HR Analytics page** — toggled via header button, includes: 10 summary KPIs, VAC by Branch chart, VAC by Division chart, Pipeline doughnut, Age distribution bar chart, Recruiter workload table, Branch comparison table, Top 10 longest open positions |
 | 2026-03-06 | **Firebase Step 6** — Inline edits push to Firebase directly (`db.ref(...).update/remove/set`); added list sorting by order property. |
+| 2026-03-06 | **Firebase Zabezpečení (Authentication)** — Passwordless Sign-in (přidání ochrany přístupu pouze pro e-maily domény `@aaaauto.cz` a `@auresholdings.eu`). |
 
 ## 📝 Firebase Implementation Tasks
 
@@ -120,4 +121,4 @@ The application expects an Excel `.xlsx` file exported from the ATS.
   * Add candidate / add phase → `db.ref(...).push()`
   * Delete job / move job → update order in Firebase
 - [x] **Step 7:** Fill in real `FIREBASE_CONFIG` values from Firebase Console
-- [ ] **Step 8:** Deploy to GitHub Pages
+- [x] **Step 8:** Zabezpečení databáze aplikováním ověření "Passwordless Sign-in" a nasazení na GitHub Pages. (COMPLETED)
