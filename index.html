@@ -1051,6 +1051,7 @@
                         name: branch,
                         jobs: {}
                     };
+                    let orderIdx = 0;
                     for (const job of jobs) {
                         const candidatesObj = {};
                         for (const c of job.candidates) {
@@ -1073,6 +1074,7 @@
                             actual: job.actual,
                             recruiter: job.recruiter || '',
                             manager: job.manager || '',
+                            order: orderIdx++,
                             candidates: candidatesObj
                         };
                     }
