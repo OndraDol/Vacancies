@@ -108,7 +108,7 @@ The application expects an Excel `.xlsx` file exported from the ATS.
 | 2026-03-06 | **Firebase Step 6** — Inline edits push to Firebase directly (`db.ref(...).update/remove/set`); added list sorting by order property. |
 | 2026-03-06 | **Firebase Zabezpečení (Authentication)** — Passwordless Sign-in (přidání ochrany přístupu pouze pro e-maily domény `@aaaauto.cz` a `@auresholdings.eu`). |
 
-## 📝 Firebase Implementation Tasks
+## ✅ Firebase Zabezpečení & Synchronizace (Kompletně nasazeno v produkci)
 
 - [x] **Step 1:** Add Firebase SDKs (`app`, `database`) to `index.html` via CDN
 - [x] **Step 2:** Add Firebase configuration object with placeholders + `FIREBASE_ENABLED` flag
