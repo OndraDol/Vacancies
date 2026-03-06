@@ -1290,7 +1290,15 @@
                 const jobs = groupedData[place];
                 if (!jobs) return;
                 const isHQ = HQ_BRANCHES.includes(place);
-                jobs.sort((a, b) => divisionRank(a.division, isHQ) - divisionRank(b.division, isHQ));
+
+                // Use explicit order if present, fallback to divisionRank
+                jobs.sort((a, b) => {
+                    if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
+                    return divisionRank(a.division, isHQ) - divisionRank(b.division, isHQ);
+                });
+
+                // Re-assign order cleanly explicitly after sort to handle mix of new ATS payload and manual sorting
+                jobs.forEach((j, i) => j.order = i);
 
                 if (regionLabel) {
                     const divider = document.createElement('div');
@@ -1394,8 +1402,8 @@
                         const hiddenGroup = collapse ? group.slice(COLLAPSE_LIMIT) : [];
 
                         const makeChip = c =>
-                            `<span class="candidate-chip inline-flex items-center gap-1 px-2 py-0.5 rounded ${phase.chipStyle} text-xs font-medium">
-                                <span contenteditable="true" class="outline-none">${c.name}${c.date ? ` <span class="opacity-60 text-[10px]">(${c.date})</span>` : ''}</span><span class="chip-remove" onclick="this.closest('.candidate-chip').remove()" title="Odebrat">&times;</span>
+                            `<span class="candidate-chip inline-flex items-center gap-1 px-2 py-0.5 rounded ${phase.chipStyle} text-xs font-medium" data-id="${c.id}">
+                                <span contenteditable="true" class="outline-none" onblur="handleCandidateRename(this, '${place.replace(/'/g, "\\'")}', '${job.jobId}', '${c.id}')">${c.name}${c.date ? ` <span class="opacity-60 text-[10px]">(${c.date})</span>` : ''}</span><span class="chip-remove" onclick="handleCandidateDelete(this, '${place.replace(/'/g, "\\'")}', '${job.jobId}', '${c.id}')" title="Odebrat">&times;</span>
                             </span>`;
 
                         const visibleChips = visibleGroup.map(makeChip).join(' ');
@@ -1412,18 +1420,18 @@
                         return `<div class="phase-row flex items-start gap-2 py-0.5">
                                     <span class="text-xs w-32 shrink-0 mt-0.5 ${phase.labelStyle}">${phase.label}</span>
                                     <div class="flex flex-wrap gap-1 items-center">${visibleChips} ${expandBtn}
-                                        <span class="add-name-btn text-xs text-slate-400 hover:text-sky-500 px-1 rounded hover:bg-sky-50" onclick="addNameToRow(this, '${phase.chipStyle}')" title="Přidat jméno">+</span>
+                                        <span class="add-name-btn text-xs text-slate-400 hover:text-sky-500 px-1 rounded hover:bg-sky-50" onclick="handleAddCandidate(this, '${place.replace(/'/g, "\\'")}', '${job.jobId}', '${phase.key}', '${phase.chipStyle}')" title="Přidat jméno">+</span>
                                     </div>
                                 </div>`;
                     }).join('');
 
                     return `
-                                <tr style="border-left: 3px solid transparent; transition: border-color 0.15s;" onmouseenter="this.style.borderLeftColor='var(--brand-300)'" onmouseleave="this.style.borderLeftColor='transparent'">
+                                <tr style="border-left: 3px solid transparent; transition: border-color 0.15s;" onmouseenter="this.style.borderLeftColor='var(--brand-300)'" onmouseleave="this.style.borderLeftColor='transparent'" data-jobid="${job.jobId}" data-order="${job.order}" data-branch="${place.replace(/'/g, "\\'")}">
                                     <td style="width:32px;padding:10px 6px;">
                                         <div class="row-controls" style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-                                            <button onclick="moveRowUp(this)" title="Posunout nahoru" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;line-height:1;padding:1px;" onmouseover="this.style.color='var(--brand-500)'" onmouseout="this.style.color='#94a3b8'">&#8593;</button>
-                                            <button onclick="moveRowDown(this)" title="Posunout dolů" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;line-height:1;padding:1px;" onmouseover="this.style.color='var(--brand-500)'" onmouseout="this.style.color='#94a3b8'">&#8595;</button>
-                                            <button onclick="deleteRow(this)" title="Smazat pozici" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;line-height:1;padding:1px;margin-top:3px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">&times;</button>
+                                            <button onclick="moveRowUp(this, '${place.replace(/'/g, "\\'")}', '${job.jobId}')" title="Posunout nahoru" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;line-height:1;padding:1px;" onmouseover="this.style.color='var(--brand-500)'" onmouseout="this.style.color='#94a3b8'">&#8593;</button>
+                                            <button onclick="moveRowDown(this, '${place.replace(/'/g, "\\'")}', '${job.jobId}')" title="Posunout dolů" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;line-height:1;padding:1px;" onmouseover="this.style.color='var(--brand-500)'" onmouseout="this.style.color='#94a3b8'">&#8595;</button>
+                                            <button onclick="deleteRow(this, '${place.replace(/'/g, "\\'")}', '${job.jobId}')" title="Smazat pozici" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;line-height:1;padding:1px;margin-top:3px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">&times;</button>
                                         </div>
                                     </td>
                                     <td>
@@ -1438,20 +1446,20 @@
                                         <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${job.date}</div>
                                     </td>
                                     <td>
-                                        <div contenteditable="true" style="font-size:12px;color:var(--text-secondary);" title="HR consultant">${job.recruiter || '-'}</div>
+                                        <div contenteditable="true" onblur="handleRecruiterBlur(this, '${place.replace(/'/g, "\\'")}', '${job.jobId}')" style="font-size:12px;color:var(--text-secondary);" title="HR consultant">${job.recruiter || '-'}</div>
                                     </td>
                                     <td>
                                         <div style="display:flex;flex-direction:column;gap:2px;">
                                             ${phaseRows || '<span style="font-size:11px;color:var(--text-muted);font-style:italic;">Žádná aktivita</span>'}
                                             <div style="position:relative;display:inline-block;">
-                                                <span class="add-phase-btn" style="font-size:11px;color:var(--text-muted);padding:1px 4px;border-radius:4px;cursor:pointer;" onmouseover="this.style.color='var(--brand-500)';this.style.background='var(--brand-50)'" onmouseout="this.style.color='var(--text-muted)';this.style.background=''" onclick="showPhaseDropdown(event, this)" title="Přidat status">+ přidat status</span>
+                                                <span class="add-phase-btn" style="font-size:11px;color:var(--text-muted);padding:1px 4px;border-radius:4px;cursor:pointer;" onmouseover="this.style.color='var(--brand-500)';this.style.background='var(--brand-50)'" onmouseout="this.style.color='var(--text-muted)';this.style.background=''" onclick="showPhaseDropdown(event, this, '${place.replace(/'/g, "\\'")}', '${job.jobId}')" title="Přidat status">+ přidat status</span>
                                             </div>
                                         </div>
                                     </td>
-                                     <td class="center"><span contenteditable="true" data-ref="${job.ref}" data-field="cap" onblur="handleOverrideBlur(this)" style="font-weight:600;color:var(--text-secondary);">${(jobOverrides[job.ref] && jobOverrides[job.ref].cap !== undefined) ? jobOverrides[job.ref].cap : job.cap}</span></td>
-                                     <td class="center"><span contenteditable="true" data-ref="${job.ref}" data-field="act" onblur="handleOverrideBlur(this)" style="font-weight:600;color:var(--text-secondary);">${(jobOverrides[job.ref] && jobOverrides[job.ref].act !== undefined) ? jobOverrides[job.ref].act : job.actual}</span></td>
+                                     <td class="center"><span contenteditable="true" data-ref="${job.ref}" data-field="cap" data-branch="${place.replace(/'/g, "\\'")}" data-jobid="${job.jobId}" onblur="handleOverrideBlur(this)" style="font-weight:600;color:var(--text-secondary);">${(jobOverrides[job.ref] && jobOverrides[job.ref].cap !== undefined) ? jobOverrides[job.ref].cap : job.cap}</span></td>
+                                     <td class="center"><span contenteditable="true" data-ref="${job.ref}" data-field="act" data-branch="${place.replace(/'/g, "\\'")}" data-jobid="${job.jobId}" onblur="handleOverrideBlur(this)" style="font-weight:600;color:var(--text-secondary);">${(jobOverrides[job.ref] && jobOverrides[job.ref].act !== undefined) ? jobOverrides[job.ref].act : job.actual}</span></td>
                                      <td class="center">
-                                         <span contenteditable="true" data-ref="${job.ref}" data-field="vac" onblur="handleOverrideBlur(this)" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-weight:700;font-size:13px;${((jobOverrides[job.ref] && jobOverrides[job.ref].vac !== undefined) ? jobOverrides[job.ref].vac : job.vac) > 0 ? 'background:#fee2e2;color:#b91c1c;' : 'background:#dcfce7;color:#15803d;'}">
+                                         <span contenteditable="true" data-ref="${job.ref}" data-field="vac" data-branch="${place.replace(/'/g, "\\'")}" data-jobid="${job.jobId}" onblur="handleOverrideBlur(this)" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-weight:700;font-size:13px;${((jobOverrides[job.ref] && jobOverrides[job.ref].vac !== undefined) ? jobOverrides[job.ref].vac : job.vac) > 0 ? 'background:#fee2e2;color:#b91c1c;' : 'background:#dcfce7;color:#15803d;'}">
                                              ${(jobOverrides[job.ref] && jobOverrides[job.ref].vac !== undefined) ? jobOverrides[job.ref].vac : job.vac}
                                          </span>
                                      </td>
@@ -1473,22 +1481,80 @@
             alert("Tato funkce by v plné verzi stáhla vygenerovaný Excel soubor se strukturou, kterou jsme dělali v Pythonu.");
         }
 
-        function moveRowUp(btn) {
+        function moveRowUp(btn, branch, jobId) {
             const tr = btn.closest('tr');
             const prev = tr.previousElementSibling;
-            if (prev) tr.parentElement.insertBefore(tr, prev);
+            if (prev) {
+                tr.parentElement.insertBefore(tr, prev);
+                if (FIREBASE_ENABLED && _lastSeenUploadId) {
+                    const trOrder = parseInt(tr.dataset.order, 10);
+                    const prevOrder = parseInt(prev.dataset.order, 10);
+                    const prevJobId = prev.dataset.jobid;
+                    const branchKey = branch.replace(/[.#$\[\]/]/g, '_');
+                    const updates = {};
+                    updates[`reports/${_lastSeenUploadId}/branches/${branchKey}/jobs/${jobId}/order`] = prevOrder;
+                    updates[`reports/${_lastSeenUploadId}/branches/${branchKey}/jobs/${prevJobId}/order`] = trOrder;
+                    db.ref().update(updates);
+                    tr.dataset.order = prevOrder;
+                    prev.dataset.order = trOrder;
+                }
+            }
         }
 
-        function moveRowDown(btn) {
+        function moveRowDown(btn, branch, jobId) {
             const tr = btn.closest('tr');
             const next = tr.nextElementSibling;
-            if (next) tr.parentElement.insertBefore(next, tr);
+            if (next) {
+                tr.parentElement.insertBefore(next, tr);
+                if (FIREBASE_ENABLED && _lastSeenUploadId) {
+                    const trOrder = parseInt(tr.dataset.order, 10);
+                    const nextOrder = parseInt(next.dataset.order, 10);
+                    const nextJobId = next.dataset.jobid;
+                    const branchKey = branch.replace(/[.#$\[\]/]/g, '_');
+                    const updates = {};
+                    updates[`reports/${_lastSeenUploadId}/branches/${branchKey}/jobs/${jobId}/order`] = nextOrder;
+                    updates[`reports/${_lastSeenUploadId}/branches/${branchKey}/jobs/${nextJobId}/order`] = trOrder;
+                    db.ref().update(updates);
+                    tr.dataset.order = nextOrder;
+                    next.dataset.order = trOrder;
+                }
+            }
         }
 
-        function deleteRow(btn) {
+        function deleteRow(btn, branch, jobId) {
             const tr = btn.closest('tr');
             if (confirm(`Smazat pozici "${tr.querySelector('td:nth-child(2) div')?.textContent?.trim() || '?'}"?`)) {
                 tr.remove();
+                if (FIREBASE_ENABLED && _lastSeenUploadId) {
+                    const branchKey = branch.replace(/[.#$\[\]/]/g, '_');
+                    db.ref(`reports/${_lastSeenUploadId}/branches/${branchKey}/jobs/${jobId}`).remove();
+                }
+            }
+        }
+
+        function handleCandidateDelete(btn, branch, jobId, candidateId) {
+            if (confirm("Opravdu smazat tohoto kandidáta?")) {
+                btn.closest('.candidate-chip').remove();
+                if (FIREBASE_ENABLED && _lastSeenUploadId) {
+                    const branchKey = branch.replace(/[.#$\[\]/]/g, '_');
+                    db.ref(`reports/${_lastSeenUploadId}/branches/${branchKey}/jobs/${jobId}/candidates/${candidateId}`).remove();
+                }
+            }
+        }
+
+        function handleCandidateRename(el, branch, jobId, candidateId) {
+            const name = el.textContent.trim();
+            if (FIREBASE_ENABLED && _lastSeenUploadId) {
+                const branchKey = branch.replace(/[.#$\[\]/]/g, '_');
+                db.ref(`reports/${_lastSeenUploadId}/branches/${branchKey}/jobs/${jobId}/candidates/${candidateId}`).update({ name });
+            }
+        }
+
+        function handleRecruiterBlur(el, branch, jobId) {
+            const name = el.textContent.trim();
+            if (FIREBASE_ENABLED && _lastSeenUploadId) {
+                const branchKey = branch.replace(/[.#$\[\]/]/g, '_');
+                db.ref(`reports/${_lastSeenUploadId}/branches/${branchKey}/jobs/${jobId}`).update({ recruiter: name });
             }
         }
 
@@ -1501,14 +1567,25 @@
             if (btnEl) btnEl.style.display = isHidden ? 'none' : '';
         }
 
-        function addNameToRow(btn, chipStyle) {
+        function handleAddCandidate(btn, branch, jobId, phaseKey, chipStyle) {
             const name = prompt('Jméno kandidáta:');
             if (!name || !name.trim()) return;
+            const newId = crypto.randomUUID();
             const container = btn.parentElement;
             const chip = document.createElement('span');
             chip.className = `candidate-chip inline-flex items-center gap-1 px-2 py-0.5 rounded ${chipStyle} text-xs font-medium`;
-            chip.innerHTML = `<span contenteditable="true" class="outline-none">${name.trim()}</span><span class="chip-remove" onclick="this.closest('.candidate-chip').remove()" title="Odebrat">&times;</span>`;
+            chip.dataset.id = newId;
+            chip.innerHTML = `<span contenteditable="true" class="outline-none" onblur="handleCandidateRename(this, '${branch.replace(/'/g, "\\'")}', '${jobId}', '${newId}')">${name.trim()}</span><span class="chip-remove" onclick="handleCandidateDelete(this, '${branch.replace(/'/g, "\\'")}', '${jobId}', '${newId}')" title="Odebrat">&times;</span>`;
             container.insertBefore(chip, btn);
+
+            if (FIREBASE_ENABLED && _lastSeenUploadId) {
+                const branchKey = branch.replace(/[.#$\[\]/]/g, '_');
+                db.ref(`reports/${_lastSeenUploadId}/branches/${branchKey}/jobs/${jobId}/candidates/${newId}`).set({
+                    name: name.trim(),
+                    category: phaseKey,
+                    date: ''
+                });
+            }
         }
 
         const ALL_PHASES = [
@@ -1521,7 +1598,7 @@
             { key: 'NO_AFTER', label: 'No after interview', labelStyle: 'text-slate-500 font-medium', chipStyle: 'bg-slate-100 text-slate-500 border border-slate-200 line-through' },
         ];
 
-        function showPhaseDropdown(event, trigger) {
+        function showPhaseDropdown(event, trigger, branch, jobId) {
             event.stopPropagation();
             document.querySelectorAll('.phase-dropdown').forEach(el => el.remove());
 
@@ -1533,7 +1610,7 @@
                 btn.textContent = phase.label;
                 btn.onclick = (e) => {
                     e.stopPropagation();
-                    addPhaseRow(trigger, phase);
+                    addPhaseRow(trigger, phase, branch, jobId);
                     dropdown.remove();
                 };
                 dropdown.appendChild(btn);
@@ -1553,29 +1630,37 @@
             }, 0);
         }
 
-        function addPhaseRow(trigger, phase) {
-            const statusContainer = trigger.closest('.flex.flex-col');
+        function addPhaseRow(trigger, phase, branch, jobId) {
+            const statusContainer = trigger.closest('.flex\\flex-col') || trigger.parentElement.parentElement;
             const row = document.createElement('div');
             row.className = 'phase-row flex items-start gap-2 py-0.5';
             row.innerHTML = `
                 <span class="text-xs w-32 shrink-0 mt-0.5 ${phase.labelStyle}">${phase.label}</span>
                 <div class="flex flex-wrap gap-1 items-center">
-                    <span class="add-name-btn text-xs text-slate-400 hover:text-sky-500 px-1 rounded hover:bg-sky-50" onclick="addNameToRow(this, '${phase.chipStyle}')" title="Přidat jméno">+</span>
+                    <span class="add-name-btn text-xs text-slate-400 hover:text-sky-500 px-1 rounded hover:bg-sky-50" onclick="handleAddCandidate(this, '${branch.replace(/'/g, "\\'")}', '${jobId}', '${phase.key}', '${phase.chipStyle}')" title="Přidat jméno">+</span>
                 </div>
             `;
             statusContainer.insertBefore(row, trigger.closest('.relative'));
-            addNameToRow(row.querySelector('.add-name-btn'), phase.chipStyle);
+            handleAddCandidate(row.querySelector('.add-name-btn'), branch, jobId, phase.key, phase.chipStyle);
         }
 
         // Save CAP/ACT/VAC override when user finishes editing
         function handleOverrideBlur(el) {
             const refNumber = el.dataset.ref;
             const field = el.dataset.field;
+            const branch = el.dataset.branch;
+            const jobId = el.dataset.jobid;
             const rawValue = el.textContent.trim();
             const value = parseInt(rawValue, 10);
             if (!refNumber || !field) return;
             if (!isNaN(value)) {
                 saveJobOverride(refNumber, field, value);
+                // Push change to current active firebase report
+                if (FIREBASE_ENABLED && _lastSeenUploadId && branch && jobId) {
+                    const branchKey = branch.replace(/[.#$\[\]/]/g, '_');
+                    db.ref(`reports/${_lastSeenUploadId}/branches/${branchKey}/jobs/${jobId}`).update({ [field]: value });
+                }
+
                 // Update VAC circle color live
                 if (field === 'vac') {
                     el.style.background = value > 0 ? '#fee2e2' : '#dcfce7';
