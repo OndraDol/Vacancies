@@ -910,8 +910,22 @@
         let _dashSort = 'DEFAULT';
         let _dashJobOverridesCache = {};
 
+        const getCountry = (branch) => {
+            const n = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            const b = n(branch || '');
+            if (['slovakia', 'bratislava', 'trnava', 'nitra', 'zilina', 'kosice', 'presov', 'banska', 'trencin', 'poprad'].some(c => b.includes(c))) return 'SK';
+            if (['poland', 'warszawa', 'katowice', 'piaseczno', 'krakow', 'poznan', 'wroclaw', 'lodz', 'zabrze', 'gdansk', 'szczecin'].some(c => b.includes(c))) return 'PL';
+            return 'CZ';
+        };
+
         function setGlobalCountry(country) {
             _globalCountry = country;
+
+            // Reset filters on country change for a fresh view
+            _dashFilterRecruiter = 'ALL';
+            _dashFilterDivision = 'ALL';
+            _dashSort = 'DEFAULT';
+
             ['CZ', 'SK', 'PL'].forEach(c => {
                 const btn = document.getElementById(`nav-btn-${c}`);
                 if (btn) {
@@ -1268,14 +1282,7 @@
 
             for (const [place, jobs] of Object.entries(groupedData)) {
                 // Global country filter mapping
-                const nameLow = place.toLowerCase();
-                const isSK = nameLow.includes('slovakia') || nameLow.includes('bratislava') || nameLow.includes('trnava') || nameLow.includes('nitra') || nameLow.includes('žilina') || nameLow.includes('košice') || nameLow.includes('presov') || nameLow.includes('banská') || nameLow.includes('trenčín') || nameLow.includes('poprad');
-                const isPL = nameLow.includes('poland') || nameLow.includes('warszawa') || nameLow.includes('katowice') || nameLow.includes('piaseczno') || nameLow.includes('kraków') || nameLow.includes('poznan') || nameLow.includes('wroclaw') || nameLow.includes('lodz') || nameLow.includes('zabrze') || nameLow.includes('gdansk') || nameLow.includes('szczecin');
-                const isCZ = !isSK && !isPL;
-
-                if (_globalCountry === 'CZ' && !isCZ) continue;
-                if (_globalCountry === 'SK' && !isSK) continue;
-                if (_globalCountry === 'PL' && !isPL) continue;
+                if (getCountry(place) !== _globalCountry) continue;
 
                 let filteredJobs = jobs.filter(job => {
                     const rec = job.recruiter || '-';
@@ -1371,10 +1378,9 @@
             let foundSK = false;
             let foundPL = false;
             const finalBranches = orderedBranches.map(b => {
-                const name = b.branch.toLowerCase();
-                // Simple heuristics to catch typical SK and PL branches if they fall outside the predefined list
-                const isSK = name.includes('slovakia') || name.includes('bratislava') || name.includes('trnava') || name.includes('nitra') || name.includes('žilina') || name.includes('košice') || name.includes('presov') || name.includes('banská') || name.includes('trenčín') || name.includes('poprad');
-                const isPL = name.includes('poland') || name.includes('warszawa') || name.includes('katowice') || name.includes('piaseczno') || name.includes('kraków') || name.includes('poznan') || name.includes('wroclaw') || name.includes('lodz') || name.includes('zabrze') || name.includes('gdansk') || name.includes('szczecin');
+                const country = getCountry(b.branch);
+                const isSK = country === 'SK';
+                const isPL = country === 'PL';
 
                 if (isSK && !foundSK && !b.regionLabel) {
                     b.regionLabel = 'Slovensko';
@@ -1931,14 +1937,7 @@
             const ageBuckets = { '0–14': 0, '15–30': 0, '31–60': 0, '61–90': 0, '90+': 0 };
 
             for (const [branch, jobs] of Object.entries(groupedData)) {
-                const nameLow = branch.toLowerCase();
-                const isSK = nameLow.includes('slovakia') || nameLow.includes('bratislava') || nameLow.includes('trnava') || nameLow.includes('nitra') || nameLow.includes('žilina') || nameLow.includes('košice') || nameLow.includes('presov') || nameLow.includes('banská') || nameLow.includes('trenčín') || nameLow.includes('poprad');
-                const isPL = nameLow.includes('poland') || nameLow.includes('warszawa') || nameLow.includes('katowice') || nameLow.includes('piaseczno') || nameLow.includes('kraków') || nameLow.includes('poznan') || nameLow.includes('wroclaw') || nameLow.includes('lodz') || nameLow.includes('zabrze') || nameLow.includes('gdansk') || nameLow.includes('szczecin');
-                const isCZ = !isSK && !isPL;
-
-                if (_globalCountry === 'CZ' && !isCZ) continue;
-                if (_globalCountry === 'SK' && !isSK) continue;
-                if (_globalCountry === 'PL' && !isPL) continue;
+                if (getCountry(branch) !== _globalCountry) continue;
 
                 if (!branchStats[branch]) branchStats[branch] = { positions: 0, vac: 0, candidates: 0, hired: 0 };
                 for (const job of jobs) {
