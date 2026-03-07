@@ -63,6 +63,7 @@ def main():
         
         category = 'OTHER'
         date_str = ""
+        action_date = parse_date(c.get('last_status_date') or c.get('rejected_declined_date'))
         
         if result == 'accepted' or status in ['start date confirmed', 'waiting for start date confirmation']:
             start_date = parse_date(c.get('start_date'))
@@ -87,14 +88,24 @@ def main():
             category = 'NO_AFTER'
             
         if category != 'OTHER':
-            push_data = {
-                "id": str(uuid.uuid4()),
-                "name": name,
-                "category": category,
-                "date": date_str,
-                "fullStatus": status
-            }
-            candidates_by_job_id[job_id].append(push_data)
+            # Filtr mrtvých kandidátů: Necháme pouze HIRED nebo ty, u kterých je akce mladší než 30 dní
+            is_recent = False
+            if action_date:
+                is_recent = (now - action_date).days <= 30
+            # Hire stavy chceme evidovat aspon 90 dni, zbytek musi byt < 30
+            is_hire = category in ['HIRED', 'HIRED_PAST']
+            if is_hire and action_date:
+                is_recent = (now - action_date).days <= 90
+            
+            if is_recent or is_hire:
+                push_data = {
+                    "id": str(uuid.uuid4()),
+                    "name": name,
+                    "category": category,
+                    "date": date_str,
+                    "fullStatus": status
+                }
+                candidates_by_job_id[job_id].append(push_data)
             
     # Zpracování jobs
     print("Zpracovávám pozice...")
@@ -117,6 +128,14 @@ def main():
         diff_days = 0
         if created:
             diff_days = max(0, (now - created).days)
+            
+        # Pravidlo 1: Zahození pozic starších než 365 dní
+        if diff_days > 365:
+            continue
+            
+        # Pravidlo 2: Pokud je pozice aktivní, ale nemá aktuální kandidáty a zároveň je stará > 30 dní, nezobrazovat (vyhnutí se opuštěným)
+        if diff_days > 30 and len(job_candidates) == 0:
+            continue
             
         owner = job.get('owner') or ''
         recruiter_raw = job.get('recruiters') or ''

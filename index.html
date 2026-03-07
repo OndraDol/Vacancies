@@ -1272,16 +1272,36 @@
                 });
             });
 
-            document.getElementById('kpi-total').innerText = activeJobs.length;
-            document.getElementById('kpi-vac').innerText = totalVac;
-            document.getElementById('kpi-active').innerText = candidates.filter(c => (c['Last status'] || "").includes('interview')).length;
-            document.getElementById('kpi-hired').innerText = hiredCount;
-
             return grouped;
         }
 
         function renderDashboard(groupedData, jobOverrides = {}) {
             contentArea.innerHTML = '';
+
+            let kpiTotal = 0;
+            let kpiVac = 0;
+            let kpiActive = 0;
+            let kpiHired = 0;
+
+            Object.values(groupedData).forEach(jobs => {
+                kpiTotal += jobs.length;
+                jobs.forEach(job => {
+                    const finalVac = (jobOverrides[job.ref] && jobOverrides[job.ref].vac !== undefined)
+                        ? parseInt(jobOverrides[job.ref].vac)
+                        : job.vac;
+                    kpiVac += finalVac;
+
+                    job.candidates.forEach(c => {
+                        if (c.category === 'FOR_INTERVIEW' || c.category === 'AFTER_INTERVIEW') kpiActive++;
+                        else if (c.category === 'HIRED' || c.category === 'HIRED_PAST') kpiHired++;
+                    });
+                });
+            });
+
+            document.getElementById('kpi-total').innerText = kpiTotal;
+            document.getElementById('kpi-vac').innerText = kpiVac;
+            document.getElementById('kpi-active').innerText = kpiActive;
+            document.getElementById('kpi-hired').innerText = kpiHired;
 
             const BRANCH_ORDER = [
                 { branch: 'Praha', regionLabel: 'Prague HQ &amp; Mototechna' },
