@@ -1,0 +1,36 @@
+name: Daily Datacruit to Firebase Sync
+
+on:
+  schedule:
+    # Běží každý den v 9:00 UTC (10:00 nebo 11:00 CET podle času)
+    # Pro spuštění v 9:00 CET zadejte "0 8 * * *" (kvůli časovému posunu UTC+1/+2)
+    - cron: '0 8 * * *'
+  # Umožňuje spustit script manuálně v GitHub UI "Run workflow"
+  workflow_dispatch:
+
+jobs:
+  sync_data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Získání kódu z repozitáře
+      uses: actions/checkout@v3
+
+    - name: Nastavení Pythonu
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Instalace závislostí
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+
+    - name: Spuštění synchronizace z Datacruit do Firebase
+      env:
+        DATACRUIT_USERNAME: ${{ secrets.DATACRUIT_USERNAME }}
+        DATACRUIT_PASSWORD: ${{ secrets.DATACRUIT_PASSWORD }}
+        FIREBASE_DATABASE_URL: ${{ secrets.FIREBASE_DATABASE_URL }}
+        FIREBASE_SECRET: ${{ secrets.FIREBASE_SECRET }}
+      run: |
+        python ats_sync.py
