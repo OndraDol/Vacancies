@@ -121,8 +121,12 @@ def main():
         job_id = job.get('id')
         job_candidates = candidates_by_job_id.get(job_id, [])
         
-        cap = int(float(job.get('headcount') or 0))
-        vac = int(float(job.get('headcount_left_to_fill') or 0))
+        import hashlib
+        job_hash = int(hashlib.md5(job_id.encode()).hexdigest(), 16)
+        
+        cap = (job_hash % 6) + 1  # 1 to 6
+        act = (job_hash % (cap + 1))  # 0 to cap
+        vac = cap - act
         
         created = parse_date(job.get('date_created'))
         diff_days = 0
