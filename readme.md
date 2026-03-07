@@ -107,6 +107,7 @@ The application expects an Excel `.xlsx` file exported from the ATS.
 | 2026-03-06 | **📊 HR Analytics page** — toggled via header button, includes: 10 summary KPIs, VAC by Branch chart, VAC by Division chart, Pipeline doughnut, Age distribution bar chart, Recruiter workload table, Branch comparison table, Top 10 longest open positions |
 | 2026-03-06 | **Firebase Step 6** — Inline edits push to Firebase directly (`db.ref(...).update/remove/set`); added list sorting by order property. |
 | 2026-03-06 | **Firebase Zabezpečení (Authentication)** — Passwordless Sign-in (přidání ochrany přístupu pouze pro e-maily domény `@aaaauto.cz` a `@auresholdings.eu`). |
+| 2026-03-07 | **Datacruit API Sync** — Automatické denní (cron) stahování, filtrování a synchronizace 600MB+ dat z ATS přímo do Firebase přes GitHub Actions (`ats_sync.py`). Zahození mrtvých pozic (>365d) a kandidátů (>30d bez aktivity). |
 
 ## ✅ Firebase Zabezpečení & Synchronizace (Kompletně nasazeno v produkci)
 
