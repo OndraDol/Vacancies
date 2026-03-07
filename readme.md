@@ -108,9 +108,9 @@ The application expects JSON structures mirroring Datacruit endpoints, specifica
 | 2026-03-06 | **Firebase Step 6** — Inline edits push to Firebase directly (`db.ref(...).update/remove/set`); added list sorting by order property. |
 | 2026-03-06 | **Firebase Zabezpečení (Authentication)** — Passwordless Sign-in (přidání ochrany přístupu pouze pro e-maily domény `@aaaauto.cz` a `@auresholdings.eu`). |
 | 2026-03-07 | **Datacruit API Sync** — Automatické denní (cron) stahování, filtrování a synchronizace 600MB+ dat z ATS přímo do Firebase přes GitHub Actions (`ats_sync.py`). Zahození mrtvých pozic (>365d) a kandidátů (>30d bez aktivity). |
-| 2026-03-07 | **Dashboard Filtry** — Přidána lišta s filtry (HR Konzultant, Divize, Řazení stáří). Filtry automaticky přepočítávají i horní souhrnná KPI čísla. |
-| 2026-03-07 | **Analytické Regiony** — Rozdělení HR Analytiky přes interaktivní pilulky na `[Vše] [CZ] [SK] [PL]`, reaktivně překreslující všechny grafy. |
-| 2026-03-07 | **Realistická Data** — V `ats_sync.py` zabudována deterministická seed/hash logika na základě ID pozice, distribuující fixní a realistická kapacitní čísla (CAP / ACT / VAC) napříč fetch cykly. |
+| 2026-03-07 | **Globální rozdělení regionů** — Navigace nyní reálně funguje jako oddělené "stránky". Aplikace defaultně renderuje **pouze CZ**. Přepnutím na **SK** či **PL** v hlavičce dojde k překreslení veškerého obsahu i analytiky čistě jenom na konkrétní stát beze stopy případných jiných zemí. |
+| 2026-03-07 | **Excel-like Filtry** — Vnořené filtry (HR Konzultant, Divize, Řazení stáří) do hlaviček tabulek, inspirované klasickým chováním Excel filtrů (malé rozevírací prvky přímo v titulku sloupce). Filtry automaticky přepočítávají i horní souhrnná KPI čísla. |
+| 2026-03-07 | **Realistická Data** — V `ats_sync.py` zabudována deterministická seed/hash logika na základě ID pozice, distribuující fixní a realistická kapacitní čísla (CAP 1-10 / VAC 1-2 / ACT dopočítáván) napříč fetch cykly. |
 
 ## ✅ Firebase Zabezpečení & Synchronizace (Kompletně nasazeno v produkci)
 
