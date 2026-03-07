@@ -110,7 +110,7 @@ def main():
     # Zpracování jobs
     print("Zpracovávám pozice...")
     grouped = {}
-    active_jobs = [j for j in jobs_raw if str(j.get('status', '')).lower() == 'active' or float(j.get('headcount_left_to_fill', 0)) > 0]
+    active_jobs = [j for j in jobs_raw if str(j.get('status', '')).lower() == 'active']
     
     for job in active_jobs:
         place = job.get('client_branch') or job.get('branch') or "Ostatní"
