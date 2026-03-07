@@ -939,6 +939,12 @@
             }
         }
 
+        function cycleSort() {
+            if (_dashSort === 'DEFAULT') setDashFilter('sort', 'AGE_ASC');
+            else if (_dashSort === 'AGE_ASC') setDashFilter('sort', 'AGE_DESC');
+            else setDashFilter('sort', 'DEFAULT');
+        }
+
         function toggleStatsView() {
             _statsView = !_statsView;
             if (_statsView) {
@@ -1299,11 +1305,7 @@
                 divSelectOptions += `<option value="${d}" ${sel}>${d}</option>`;
             });
 
-            const sortOptions = `
-                <option value="DEFAULT" ${_dashSort === 'DEFAULT' ? 'selected' : ''}>Výchozí</option>
-                <option value="AGE_DESC" ${_dashSort === 'AGE_DESC' ? 'selected' : ''}>Nejstarší</option>
-                <option value="AGE_ASC" ${_dashSort === 'AGE_ASC' ? 'selected' : ''}>Nejmladší</option>
-            `;
+
 
             let kpiTotal = 0;
             let kpiVac = 0;
@@ -1477,27 +1479,33 @@
                         <tr>
                             <th style="width:32px"></th>
                             <th>
-                                <div class="flex items-center gap-1">
+                                <div class="flex items-center">
                                     Pozice / Divize
-                                    <select onchange="setDashFilter('division', this.value)" class="bg-transparent border-none text-brand-500 font-bold outline-none cursor-pointer hover:bg-slate-100 rounded px-1 transition h-6 leading-none" style="padding-right:0;">
-                                        ${divSelectOptions}
-                                    </select>
+                                    <div class="relative flex items-center justify-center w-6 h-6 ml-1 rounded hover:bg-slate-100 transition cursor-pointer">
+                                        <i data-lucide="filter" class="w-3.5 h-3.5" style="color:${_dashFilterDivision === 'ALL' ? '#94a3b8' : 'var(--brand-500)'}"></i>
+                                        <select onchange="setDashFilter('division', this.value)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title="Filtrovat divizi">
+                                            ${divSelectOptions}
+                                        </select>
+                                    </div>
                                 </div>
                             </th>
                             <th>
-                                <div class="flex items-center gap-1">
+                                <div class="flex items-center">
                                     Stáří
-                                    <select onchange="setDashFilter('sort', this.value)" class="bg-transparent border-none text-brand-500 font-bold outline-none cursor-pointer hover:bg-slate-100 rounded px-1 transition h-6 leading-none" style="padding-right:0;">
-                                        ${sortOptions}
-                                    </select>
+                                    <button onclick="cycleSort()" title="Změnit řazení stáří" class="ml-1 flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition">
+                                        <i data-lucide="${_dashSort === 'AGE_DESC' ? 'arrow-down' : (_dashSort === 'AGE_ASC' ? 'arrow-up' : 'arrow-up-down')}" class="w-3.5 h-3.5" style="color:${_dashSort === 'DEFAULT' ? '#94a3b8' : 'var(--brand-500)'}"></i>
+                                    </button>
                                 </div>
                             </th>
                             <th>
-                                <div class="flex items-center gap-1">
+                                <div class="flex items-center">
                                     HR consultant
-                                    <select onchange="setDashFilter('recruiter', this.value)" class="bg-transparent border-none text-brand-500 font-bold outline-none cursor-pointer hover:bg-slate-100 rounded px-1 transition h-6 leading-none" style="padding-right:0;">
-                                        ${recSelectOptions}
-                                    </select>
+                                    <div class="relative flex items-center justify-center w-6 h-6 ml-1 rounded hover:bg-slate-100 transition cursor-pointer">
+                                        <i data-lucide="filter" class="w-3.5 h-3.5" style="color:${_dashFilterRecruiter === 'ALL' ? '#94a3b8' : 'var(--brand-500)'}"></i>
+                                        <select onchange="setDashFilter('recruiter', this.value)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" title="Filtrovat konzultanta">
+                                            ${recSelectOptions}
+                                        </select>
+                                    </div>
                                 </div>
                             </th>
                             <th style="width:33%">Status Kandidátů</th>
