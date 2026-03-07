@@ -124,9 +124,13 @@ def main():
         import hashlib
         job_hash = int(hashlib.md5(job_id.encode()).hexdigest(), 16)
         
-        cap = (job_hash % 6) + 1  # 1 to 6
-        act = (job_hash % (cap + 1))  # 0 to cap
-        vac = cap - act
+        cap = (job_hash % 10) + 1  # 1 to 10
+        vac = (job_hash % 2) + 1   # 1 to 2
+        
+        if cap < vac:
+            cap = vac
+            
+        act = cap - vac
         
         created = parse_date(job.get('date_created'))
         diff_days = 0

@@ -792,11 +792,11 @@
         </div>
         <div class="flex gap-3 items-center">
             <div id="countryNav" class="flex gap-1 mr-4 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-                <button onclick="scrollToCountry('CZ')"
-                    class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition">CZ</button>
-                <button onclick="scrollToCountry('SK')"
+                <button id="nav-btn-CZ" onclick="setGlobalCountry('CZ')"
+                    class="px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 shadow-sm transition">CZ</button>
+                <button id="nav-btn-SK" onclick="setGlobalCountry('SK')"
                     class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition">SK</button>
-                <button onclick="scrollToCountry('PL')"
+                <button id="nav-btn-PL" onclick="setGlobalCountry('PL')"
                     class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition">PL</button>
             </div>
             <button onclick="toggleStatsView()" id="statsBtn" class="btn-upload hidden">
@@ -845,39 +845,7 @@
                     <div class="kpi-value" id="kpi-hired" style="color:#10b981;">0</div>
                 </div>
             </div>
-        </div>
-
-        <!-- Dashboard Filters -->
-        <div id="dashboardFilters"
-            class="flex flex-wrap gap-4 mt-6 mb-2 bg-white p-4 rounded-xl border border-slate-200 shadow-sm transition-all duration-300">
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">HR
-                    Konzultant</label>
-                <select id="filterRecruiter" onchange="applyDashFilters()"
-                    class="w-full text-sm border border-slate-200 rounded-lg bg-slate-50 py-1.5 px-3 outline-none focus:ring-2 focus:ring-blue-100">
-                    <option value="ALL">Všichni</option>
-                </select>
-            </div>
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Divize</label>
-                <select id="filterDivision" onchange="applyDashFilters()"
-                    class="w-full text-sm border border-slate-200 rounded-lg bg-slate-50 py-1.5 px-3 outline-none focus:ring-2 focus:ring-blue-100">
-                    <option value="ALL">Všechny divize</option>
-                </select>
-            </div>
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Řazení
-                    pozic</label>
-                <select id="sortPositions" onchange="applyDashFilters()"
-                    class="w-full text-sm border border-slate-200 rounded-lg bg-slate-50 py-1.5 px-3 outline-none focus:ring-2 focus:ring-blue-100">
-                    <option value="DEFAULT">Dle divize (Výchozí)</option>
-                    <option value="AGE_DESC">Nejstarší (Dle dnů otevření)</option>
-                    <option value="AGE_ASC">Nejmladší (Dle dnů otevření)</option>
-                </select>
-            </div>
-        </div>
-
-        <div id="contentArea"></div>
+            <div id="contentArea"></div>
         </div>
 
         <!-- Statistics Panel -->
@@ -886,16 +854,7 @@
                 <div class="flex items-center gap-4">
                     <h2 style="font-size:22px;font-weight:800;color:var(--text-primary);letter-spacing:-0.02em;">📊 HR
                         Analytika</h2>
-                    <div class="flex gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm ml-4">
-                        <button onclick="setStatsCountry('ALL')" id="btn-stats-ALL"
-                            class="px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 shadow-sm transition">Vše</button>
-                        <button onclick="setStatsCountry('CZ')" id="btn-stats-CZ"
-                            class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition">CZ</button>
-                        <button onclick="setStatsCountry('SK')" id="btn-stats-SK"
-                            class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition">SK</button>
-                        <button onclick="setStatsCountry('PL')" id="btn-stats-PL"
-                            class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition">PL</button>
-                    </div>
+
                 </div>
                 <button onclick="toggleStatsView()" class="btn-upload"><i data-lucide="arrow-left" class="w-4 h-4"
                         style="color:var(--brand-500)"></i> Zpět na dashboard</button>
@@ -943,7 +902,7 @@
         // Global: last parsed report data for stats
         let _lastReportData = null;
         let _statsView = false;
-        let _currentStatsCountry = 'ALL';
+        let _globalCountry = 'CZ';
 
         // ── Dashboard Filters State ──
         let _dashFilterRecruiter = 'ALL';
@@ -951,30 +910,33 @@
         let _dashSort = 'DEFAULT';
         let _dashJobOverridesCache = {};
 
-        function applyDashFilters() {
-            _dashFilterRecruiter = document.getElementById('filterRecruiter').value;
-            _dashFilterDivision = document.getElementById('filterDivision').value;
-            _dashSort = document.getElementById('sortPositions').value;
+        function setGlobalCountry(country) {
+            _globalCountry = country;
+            ['CZ', 'SK', 'PL'].forEach(c => {
+                const btn = document.getElementById(`nav-btn-${c}`);
+                if (btn) {
+                    btn.className = (c === country)
+                        ? "px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 shadow-sm transition"
+                        : "px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition";
+                }
+            });
+
+            if (_lastReportData) {
+                if (_statsView) renderStats(_lastReportData);
+                else renderDashboard(_lastReportData, _dashJobOverridesCache);
+                lucide.createIcons();
+            }
+        }
+
+        function setDashFilter(type, value) {
+            if (type === 'recruiter') _dashFilterRecruiter = value;
+            if (type === 'division') _dashFilterDivision = value;
+            if (type === 'sort') _dashSort = value;
 
             if (_lastReportData) {
                 renderDashboard(_lastReportData, _dashJobOverridesCache, true);
                 lucide.createIcons();
             }
-        }
-
-        function setStatsCountry(country) {
-            _currentStatsCountry = country;
-
-            ['ALL', 'CZ', 'SK', 'PL'].forEach(c => {
-                const btn = document.getElementById(`btn-stats-${c}`);
-                if (c === country) {
-                    btn.className = "px-3 py-1.5 text-xs font-bold rounded-lg text-white bg-blue-600 shadow-sm transition";
-                } else {
-                    btn.className = "px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition";
-                }
-            });
-
-            if (_lastReportData) renderStats(_lastReportData);
         }
 
         function toggleStatsView() {
@@ -1299,6 +1261,16 @@
             const filteredGroupedData = {};
 
             for (const [place, jobs] of Object.entries(groupedData)) {
+                // Global country filter mapping
+                const nameLow = place.toLowerCase();
+                const isSK = nameLow.includes('slovakia') || nameLow.includes('bratislava') || nameLow.includes('trnava') || nameLow.includes('nitra') || nameLow.includes('žilina') || nameLow.includes('košice') || nameLow.includes('presov') || nameLow.includes('banská') || nameLow.includes('trenčín') || nameLow.includes('poprad');
+                const isPL = nameLow.includes('poland') || nameLow.includes('warszawa') || nameLow.includes('katowice') || nameLow.includes('piaseczno') || nameLow.includes('kraków') || nameLow.includes('poznan') || nameLow.includes('wroclaw') || nameLow.includes('lodz') || nameLow.includes('zabrze') || nameLow.includes('gdansk') || nameLow.includes('szczecin');
+                const isCZ = !isSK && !isPL;
+
+                if (_globalCountry === 'CZ' && !isCZ) continue;
+                if (_globalCountry === 'SK' && !isSK) continue;
+                if (_globalCountry === 'PL' && !isPL) continue;
+
                 let filteredJobs = jobs.filter(job => {
                     const rec = job.recruiter || '-';
                     const div = job.division || '';
@@ -1315,20 +1287,23 @@
                 }
             }
 
-            if (!isFilterUpdate) {
-                const recSelect = document.getElementById('filterRecruiter');
-                const divSelect = document.getElementById('filterDivision');
+            let recSelectOptions = '<option value="ALL">Vše</option>';
+            Array.from(uniqueRecruiters).sort((a, b) => a.localeCompare(b)).forEach(r => {
+                const sel = r === _dashFilterRecruiter ? 'selected' : '';
+                recSelectOptions += `<option value="${r}" ${sel}>${r}</option>`;
+            });
 
-                recSelect.innerHTML = '<option value="ALL">Všichni</option>';
-                Array.from(uniqueRecruiters).sort((a, b) => a.localeCompare(b)).forEach(r => {
-                    recSelect.add(new Option(r, r, false, r === _dashFilterRecruiter));
-                });
+            let divSelectOptions = '<option value="ALL">Vše</option>';
+            Array.from(uniqueDivisions).sort((a, b) => a.localeCompare(b)).forEach(d => {
+                const sel = d === _dashFilterDivision ? 'selected' : '';
+                divSelectOptions += `<option value="${d}" ${sel}>${d}</option>`;
+            });
 
-                divSelect.innerHTML = '<option value="ALL">Všechny divize</option>';
-                Array.from(uniqueDivisions).sort((a, b) => a.localeCompare(b)).forEach(d => {
-                    divSelect.add(new Option(d, d, false, d === _dashFilterDivision));
-                });
-            }
+            const sortOptions = `
+                <option value="DEFAULT" ${_dashSort === 'DEFAULT' ? 'selected' : ''}>Výchozí</option>
+                <option value="AGE_DESC" ${_dashSort === 'AGE_DESC' ? 'selected' : ''}>Nejstarší</option>
+                <option value="AGE_ASC" ${_dashSort === 'AGE_ASC' ? 'selected' : ''}>Nejmladší</option>
+            `;
 
             let kpiTotal = 0;
             let kpiVac = 0;
@@ -1501,9 +1476,30 @@
                     <thead>
                         <tr>
                             <th style="width:32px"></th>
-                            <th>Pozice / Divize</th>
-                            <th>Stáří</th>
-                            <th>HR consultant</th>
+                            <th>
+                                <div class="flex items-center gap-1">
+                                    Pozice / Divize
+                                    <select onchange="setDashFilter('division', this.value)" class="bg-transparent border-none text-brand-500 font-bold outline-none cursor-pointer hover:bg-slate-100 rounded px-1 transition h-6 leading-none" style="padding-right:0;">
+                                        ${divSelectOptions}
+                                    </select>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="flex items-center gap-1">
+                                    Stáří
+                                    <select onchange="setDashFilter('sort', this.value)" class="bg-transparent border-none text-brand-500 font-bold outline-none cursor-pointer hover:bg-slate-100 rounded px-1 transition h-6 leading-none" style="padding-right:0;">
+                                        ${sortOptions}
+                                    </select>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="flex items-center gap-1">
+                                    HR consultant
+                                    <select onchange="setDashFilter('recruiter', this.value)" class="bg-transparent border-none text-brand-500 font-bold outline-none cursor-pointer hover:bg-slate-100 rounded px-1 transition h-6 leading-none" style="padding-right:0;">
+                                        ${recSelectOptions}
+                                    </select>
+                                </div>
+                            </th>
                             <th style="width:33%">Status Kandidátů</th>
                             <th class="center">CAP</th>
                             <th class="center">ACT</th>
@@ -1932,9 +1928,9 @@
                 const isPL = nameLow.includes('poland') || nameLow.includes('warszawa') || nameLow.includes('katowice') || nameLow.includes('piaseczno') || nameLow.includes('kraków') || nameLow.includes('poznan') || nameLow.includes('wroclaw') || nameLow.includes('lodz') || nameLow.includes('zabrze') || nameLow.includes('gdansk') || nameLow.includes('szczecin');
                 const isCZ = !isSK && !isPL;
 
-                if (_currentStatsCountry === 'CZ' && !isCZ) continue;
-                if (_currentStatsCountry === 'SK' && !isSK) continue;
-                if (_currentStatsCountry === 'PL' && !isPL) continue;
+                if (_globalCountry === 'CZ' && !isCZ) continue;
+                if (_globalCountry === 'SK' && !isSK) continue;
+                if (_globalCountry === 'PL' && !isPL) continue;
 
                 if (!branchStats[branch]) branchStats[branch] = { positions: 0, vac: 0, candidates: 0, hired: 0 };
                 for (const job of jobs) {
