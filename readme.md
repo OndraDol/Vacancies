@@ -1,36 +1,36 @@
 # Aures Vacancy Dashboard 🚀
 
 ## 📋 Project Overview
-This application visualizes and manages recruitment data exported from the ATS (Applicant Tracking System).
-It is currently transitioning from a **Single File Application (SFA)** running entirely client-side to a **Real-Time Collaborative Dashboard** powered by Firebase. This will allow multiple recruiters and managers (typically up to 5 concurrent users) to manage and edit recruitment data simultaneously, similar to Google Docs or Excel Online.
+This application visualizes and manages recruitment data exported from the internal AURES ATS (Datacruit).
+It operates as a **Real-Time Collaborative Dashboard** powered by Firebase Realtime Database and an automated Python synchronization backend. This allows multiple recruiters and managers to manage and edit recruitment data simultaneously, similar to Google Docs or Excel Online.
 
 ## 🛠 Tech Stack
 * **Core:** HTML5, Vanilla JavaScript (ES6+)
 * **Styling:** Tailwind CSS (utility foundation) + Custom Vanilla CSS (branding, glassmorphism)
 * **Typography:** [Inter](https://fonts.google.com/specimen/Inter) (Modern, clean sans-serif)
-* **Data Parsing:** [SheetJS (xlsx)](https://sheetjs.com/) (loaded via CDN)
-* **Icons:** [Lucide Icons](https://lucide.dev/) (loaded via CDN)
-* **Collaborative Backend:** [Firebase Realtime Database v10](https://firebase.google.com/) (compat mode, implementation in progress)
+* **Data Backend Logic:** Python (`ats_sync.py`) via GitHub Actions (fetching & aggregating Datacruit API json payloads)
+* **Collaborative Backend:** [Firebase Realtime Database v10](https://firebase.google.com/) (compat mode, real-time sync for edits)
 * **Charts:** [Chart.js v4](https://www.chartjs.org/) (loaded via CDN — bar, doughnut charts)
 * **Hosting:** GitHub Pages (Planned) — repo: [OndraDol/Vacancies](https://github.com/OndraDol/Vacancies)
 
-## 🔄 Architecture: Current State
+## 🔄 Architecture & Data Flow
 
-### Client-Side + Persistent Overrides (Active)
-* **Storage:** Data is stored locally in the browser using `IndexedDB` (two stores):
-  * `files` — persists the last uploaded `.xlsx` file so the dashboard auto-loads on next visit
-  * `jobOverrides` — persists manually edited **CAP / ACT / VAC** values, keyed by `Ref. number` (e.g. `A123456`). These survive file re-uploads and are merged with fresh ATS data on every render.
-* **Flow:** Upload `.xlsx` → SheetJS parses → `jobOverrides` loaded from IndexedDB → rendered to DOM
+### The Sync Pipeline (Datacruit API → Python)
+The dashboard no longer relies on manual Excel uploads by users. Instead, a fully automated pipeline fetches current data from Datacruit directly:
+1. **GitHub Actions (Cron):** A scheduled workflow (`.github/workflows/datacruit_sync.yml`) triggers the `ats_sync.py` script every morning.
+2. **Datacruit API:** The Python script makes authenticated GET requests to the Datacruit API, sequentially downloading the `jobs` and `hiring_processes` datasets.
+3. **Python Aggregation & Filtration:**
+   * Obsolete positions (older than 365 days / not active) are filtered out.
+   * Dead candidate records (>30 days since last activity and not matching "Hired" states) are dropped.
+   * Internal data structure translates JSON lists into nested tree structures grouped by Branch and Position.
+4. **Firebase Realtime Database:** The resulting clean `report` JSON payload is pushed directly to Firebase under a unique `/reports/{uploadId}`. The pointer `/latestReport` is immediately updated.
 
-### Firebase Real-Time (In Progress)
-When `FIREBASE_ENABLED = true` (i.e. real config values filled in `FIREBASE_CONFIG`):
-1. **Upload** → ATS data is pushed to `/reports/{uploadId}` in Firebase Realtime Database
-2. **Pointer** → `/latestReport` node is updated with the new `uploadId`
-3. **Listeners** → all connected browsers have `onValue('/latestReport')` active; on change they fetch the new report and re-render the dashboard automatically
-4. **Fallback** → if Firebase is not configured, the app silently falls back to IndexedDB
+### Client-Side Real-Time View (Firebase)
+1. **Listeners:** All connected browsers listen to `onValue('/latestReport')`. If a sync finishes (or another recruiter uploads a change), the client immediately pulls the new `/reports/{uploadId}` and re-renders the DOM without refreshing the page.
+2. **Persistent Overrides:** Locally, the client still queries `IndexedDB` (`jobOverrides`) to re-apply any manual overrides for **CAP / ACT / VAC** values (keyed by Ref. number) that were strictly tracked by an individual user, ensuring zero loss of custom capacity tracking even when fresh ATS data arrives.
 
-## 📂 Data Structure (ATS Input)
-The application expects an Excel `.xlsx` file exported from the ATS.
+## 📂 Target Mapping (API to Dashboard)
+The application expects JSON structures mirroring Datacruit endpoints, specifically mapping:
 
 ### Sheet: "Jobs" (Positions)
 | Column | Usage |
@@ -90,8 +90,8 @@ The application expects an Excel `.xlsx` file exported from the ATS.
 * **Branch cards:** Rounded with shadow, stronger header border, `font-weight: 800`
 
 ## 🔒 Data & Repository Rules
-* Excel / CSV files are excluded from git via `.gitignore` — ATS reports are internal data and must never be committed
-* Files are uploaded locally by the user at runtime via `<input type="file">`, not from the repo
+* Internal ATS metrics are completely stripped out before reaching the GitHub repo. Data lives only dynamically in Firebase Database or briefly in transient GitHub Actions memory spaces.
+* `DATACRUIT_USERNAME`, `DATACRUIT_PASSWORD`, and Firebase Admin keys belong inside strictly isolated GitHub Secrets.
 
 ## ✅ Completed Features
 

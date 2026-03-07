@@ -23,26 +23,28 @@
 
     <style>
         :root {
-            --brand-50: #0f172a;
-            --brand-100: #1e293b;
-            --brand-200: #334155;
-            --brand-300: #0284c7;
-            --brand-400: #0ea5e9;
-            --brand-500: #38bdf8;
-            --brand-600: #7dd3fc;
-            --brand-700: #bae6fd;
-            --brand-800: #e0f2fe;
-            --brand-900: #f0f9ff;
-            --surface: #0b1120;
-            --surface-warm: #0f172a;
-            --surface-card: #1e293b;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --border-light: rgba(255, 255, 255, 0.06);
-            --border-medium: rgba(255, 255, 255, 0.12);
-            --glass: rgba(15, 23, 42, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.1);
+            --brand-50: #f4f8fc;
+            --brand-100: #eef5fa;
+            --brand-200: #dceaf5;
+            --brand-300: #c1ddf2;
+            --brand-400: #7ebae8;
+            --brand-500: #3b82f6;
+            /* Elegant primary blue */
+            --brand-600: #2563eb;
+            --brand-700: #1d4ed8;
+            --brand-800: #1e40af;
+            --brand-900: #1e3a8a;
+            --surface: #f3f6f9;
+            /* Subtle warm grey/blue off-white */
+            --surface-warm: #ffffff;
+            --surface-card: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --text-muted: #9ca3af;
+            --border-light: rgba(15, 23, 42, 0.05);
+            --border-medium: rgba(15, 23, 42, 0.1);
+            --glass: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.5);
         }
 
         * {
@@ -219,15 +221,15 @@
             cursor: pointer;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             font-family: inherit;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
         }
 
         .btn-upload:hover {
-            background: var(--brand-200);
+            background: var(--brand-50);
             border-color: var(--brand-300);
-            color: var(--brand-500);
+            color: var(--brand-600);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
         }
 
         .btn-export {
@@ -433,16 +435,16 @@
             overflow: hidden;
             margin-bottom: 16px;
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
         }
 
         .branch-card:hover {
             border-color: var(--border-medium);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
         }
 
         .branch-header {
-            background: linear-gradient(90deg, var(--surface-warm) 0%, var(--surface-card) 100%);
+            background: linear-gradient(90deg, var(--brand-50) 0%, var(--surface-card) 100%);
             border-bottom: 1px solid var(--border-medium);
             padding: 14px 20px;
             display: flex;
@@ -534,7 +536,7 @@
 
         /* Zebra striping for easier row scanning */
         .vacancy-table tbody tr:nth-child(even) {
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(15, 23, 42, 0.015);
         }
 
         .vacancy-table tbody tr:last-child {
@@ -542,7 +544,7 @@
         }
 
         .vacancy-table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.05) !important;
+            background: rgba(37, 99, 235, 0.03) !important;
             border-left-color: var(--brand-500) !important;
         }
 
@@ -789,13 +791,13 @@
             </div>
         </div>
         <div class="flex gap-3 items-center">
-            <div id="countryNav" class="flex gap-1 mr-4 bg-slate-800/50 p-1 rounded-xl border border-white/5">
+            <div id="countryNav" class="flex gap-1 mr-4 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
                 <button onclick="scrollToCountry('CZ')"
-                    class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-300 hover:text-sky-400 hover:bg-slate-800 transition">CZ</button>
+                    class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition">CZ</button>
                 <button onclick="scrollToCountry('SK')"
-                    class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-300 hover:text-sky-400 hover:bg-slate-800 transition">SK</button>
+                    class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition">SK</button>
                 <button onclick="scrollToCountry('PL')"
-                    class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-300 hover:text-sky-400 hover:bg-slate-800 transition">PL</button>
+                    class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition">PL</button>
             </div>
             <button onclick="toggleStatsView()" id="statsBtn" class="btn-upload hidden">
                 <i data-lucide="bar-chart-3" class="w-4 h-4" style="color:var(--brand-500)"></i> Statistiky
@@ -809,9 +811,9 @@
     <main class="flex-1 overflow-auto p-6 relative" style="z-index:1;">
 
         <div id="loadingOverlay"
-            class="absolute inset-0 flex flex-col justify-center items-center z-20 transition-all duration-500">
-            <div class="loader mb-4"></div>
-            <h2 class="text-xl font-bold text-slate-200 tracking-tight">Stahování ATS dat z cloudu...</h2>
+            class="absolute inset-0 flex flex-col justify-center items-center z-20 transition-all duration-500 bg-slate-50/80 backdrop-blur-sm">
+            <div class="loader mb-4 border-slate-200 border-t-blue-500"></div>
+            <h2 class="text-xl font-bold text-slate-800 tracking-tight">Stahování ATS dat z cloudu...</h2>
             <p class="text-sm text-slate-500 mt-2">Zajištění aktuálních čísel z Datacruit systému</p>
         </div>
 
@@ -1397,46 +1399,46 @@
                         {
                             key: 'HIRED',
                             label: 'Hired',
-                            labelStyle: 'text-red-400 font-semibold drop-shadow-md',
-                            chipStyle: 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            labelStyle: 'text-rose-600 font-bold',
+                            chipStyle: 'bg-rose-50 text-rose-700 border border-rose-200 shadow-sm'
                         },
                         {
                             key: 'HIRED_PAST',
                             label: 'Hired in past',
-                            labelStyle: 'text-red-500/60 font-semibold',
-                            chipStyle: 'bg-red-500/5 text-red-500/60 border border-red-500/10'
+                            labelStyle: 'text-rose-500/80 font-bold',
+                            chipStyle: 'bg-rose-50/50 text-rose-600 border border-rose-100'
                         },
                         {
                             key: 'FOR_INTERVIEW',
                             label: 'For interview',
-                            labelStyle: 'text-emerald-400 font-semibold drop-shadow-md',
-                            chipStyle: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            labelStyle: 'text-emerald-600 font-bold',
+                            chipStyle: 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm'
                         },
                         {
                             key: 'AFTER_INTERVIEW',
                             label: 'After interview',
-                            labelStyle: 'text-teal-400 font-semibold',
-                            chipStyle: 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
+                            labelStyle: 'text-teal-600 font-semibold',
+                            chipStyle: 'bg-teal-50 text-teal-700 border border-teal-200'
                         },
                         {
                             key: 'OFFER_REFUSED',
                             label: 'Offer refused',
                             labelStyle: 'text-slate-500 font-medium',
-                            chipStyle: 'bg-slate-800 text-slate-400 border border-slate-700/50',
+                            chipStyle: 'bg-slate-100 text-slate-600 border border-slate-200',
                             collapsible: true
                         },
                         {
                             key: 'NO_SHOW',
                             label: 'No show',
                             labelStyle: 'text-slate-500 font-medium',
-                            chipStyle: 'bg-slate-800 text-slate-400 border border-slate-700/50',
+                            chipStyle: 'bg-slate-100 text-slate-600 border border-slate-200',
                             collapsible: true
                         },
                         {
                             key: 'NO_AFTER',
                             label: 'No after interview',
                             labelStyle: 'text-slate-500 font-medium',
-                            chipStyle: 'bg-slate-800 text-slate-400 border border-slate-700/50 line-through',
+                            chipStyle: 'bg-slate-100 text-slate-600 border border-slate-200 line-through',
                             collapsible: true
                         },
                     ];
